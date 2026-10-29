@@ -28,3 +28,9 @@ Teltonika FMB120 için canlı harita. Veriyi flespi alır; bu statik sayfa GitHu
 ## Ayarlar
 
 `app.js` başındaki `DEVICE_ID` flespi cihaz ID'sidir.
+
+## Harita katmanları
+
+- OSM: OpenStreetMap standart (eski adı "Sokak").
+- CARTO: açık temada Positron, koyu temada Dark Matter (tema değişince kendiliğinden geçer).
+- Hibrit: Esri uydu + yol/yer etiketleri.
