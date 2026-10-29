@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: https://tile.openstreetmap.org https://server.arcgisonline.com; connect-src https://flespi.io wss://mqtt.flespi.io; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="strict-origin">
+<meta name="robots" content="noindex, nofollow">
+<title>Araç Takip</title>
+<link rel="stylesheet" href="vendor/leaflet.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="map"></div>
+
+<div class="panel">
+  <div class="row">
+    <span id="dot" class="dot" title="Bağlantı durumu"></span>
+    <span class="title">Araba</span>
+    <select id="hours" title="Rota süresi">
+      <option value="1">Son 1 saat</option>
+      <option value="6" selected>Son 6 saat</option>
+      <option value="24">Son 24 saat</option>
+    </select>
+  </div>
+  <div class="stats">
+    <div><span>Hız</span><b id="speed">–</b></div>
+    <div><span>Son konum</span><b id="ago">–</b></div>
+  </div>
+  <div class="row">
+    <label class="chk"><input type="checkbox" id="follow" checked> Aracı takip et</label>
+    <span class="grow"></span>
+    <button id="logout" type="button" title="Token'ı bu tarayıcıdan sil">Çıkış</button>
+  </div>
+  <div id="msg"></div>
+</div>
+
+<div id="login">
+  <form class="box" id="loginForm">
+    <b>flespi token</b>
+    <p class="hint">Salt-okuma token'ını yapıştır. Token sadece flespi'ye gönderilir.</p>
+    <input id="tokenInput" type="password" autocomplete="off" spellcheck="false" placeholder="Token" required>
+    <label class="chk"><input type="checkbox" id="remember"> Bu cihazda hatırla (kapalıysa sekme kapanınca silinir)</label>
+    <button class="primary" type="submit">Giriş</button>
+  </form>
+</div>
+
+<script src="vendor/leaflet.js"></script>
+<script src="vendor/mqtt.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

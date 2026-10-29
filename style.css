@@ -1,0 +1,35 @@
+  :root {
+    --bg: #ffffff; --fg: #1d2330; --muted: #6b7280; --card: rgba(255,255,255,.95);
+    --border: #e5e7eb; --accent: #2563eb; --ok: #16a34a; --warn: #d97706; --bad: #dc2626;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #111827; --fg: #f3f4f6; --muted: #9ca3af; --card: rgba(17,24,39,.94); --border: #374151; --accent: #60a5fa; }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg);
+    font: 15px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  #map { position: absolute; inset: 0; }
+  .panel { position: absolute; z-index: 1000; left: 12px; top: 12px; right: 12px; max-width: 360px;
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px;
+    box-shadow: 0 4px 16px rgba(0,0,0,.15); }
+  .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .title { font-weight: 600; font-size: 16px; flex: 1; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); }
+  .dot.live { background: var(--ok); } .dot.wait { background: var(--warn); } .dot.err { background: var(--bad); }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; margin: 10px 0; }
+  .stats div span { display: block; color: var(--muted); font-size: 12px; }
+  .stats div b { font-size: 17px; font-variant-numeric: tabular-nums; }
+  select, button, input { font: inherit; color: var(--fg); background: var(--bg);
+    border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; }
+  button { cursor: pointer; } button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  label.chk { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; }
+  #msg { color: var(--muted); font-size: 13px; margin-top: 6px; min-height: 1em; }
+  #login { position: fixed; inset: 0; z-index: 2000; display: none; align-items: center; justify-content: center;
+    background: rgba(0,0,0,.45); padding: 16px; }
+  #login .box { background: var(--bg); border-radius: 12px; padding: 20px; width: 100%; max-width: 420px; }
+  #login input { width: 100%; margin: 10px 0; }
+  .car { width: 22px; height: 22px; border-radius: 50%; background: var(--accent); border: 3px solid #fff;
+    box-shadow: 0 0 0 2px var(--accent), 0 2px 8px rgba(0,0,0,.4); }
+  .grow { flex: 1; }
+  .hint { color: var(--muted); font-size: 13px; margin: 6px 0 0; }
+  #login .chk { margin-bottom: 12px; }
