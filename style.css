@@ -208,3 +208,12 @@ button.primary:active { filter: brightness(.9); }
 .bars small { font-size: 9px; color: var(--muted); font-variant-numeric: tabular-nums; line-height: 1; }
 .bars .bar:hover .fill { opacity: 1; filter: brightness(1.1); }
 .tiles.three b { font-size: 13px; white-space: nowrap; }
+
+/* ---------- Form alanları ---------- */
+/* Tarayıcının varsayılan beyaz kutusunu kapat; cam temaya ve açık/koyu moda uy */
+:root { color-scheme: light dark; }
+.field, #day, #tokenInput { -webkit-appearance: none; appearance: none; color: var(--fg); background: var(--fill);
+  border: 1px solid var(--hair); outline-offset: 0; }
+.field::placeholder, #tokenInput::placeholder { color: var(--muted); opacity: 1; }
+.field:focus, #day:focus, #tokenInput:focus { background: var(--fill-on); border-color: var(--accent); outline: none; }
+.field:-webkit-autofill, #tokenInput:-webkit-autofill { -webkit-text-fill-color: var(--fg); box-shadow: 0 0 0 40px var(--glass-strong) inset; }
