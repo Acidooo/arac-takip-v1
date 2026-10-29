@@ -217,3 +217,9 @@ button.primary:active { filter: brightness(.9); }
 .field::placeholder, #tokenInput::placeholder { color: var(--muted); opacity: 1; }
 .field:focus, #day:focus, #tokenInput:focus { background: var(--fill-on); border-color: var(--accent); outline: none; }
 .field:-webkit-autofill, #tokenInput:-webkit-autofill { -webkit-text-fill-color: var(--fg); box-shadow: 0 0 0 40px var(--glass-strong) inset; }
+
+.pickbar { position: fixed; z-index: 1150; left: 50%; transform: translateX(-50%); bottom: calc(max(14px, env(safe-area-inset-bottom)) + 70px);
+  display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 14px; border-radius: 99px; color: #fff; font-weight: 600; font-size: 13px;
+  background: rgba(10,132,255,.92); box-shadow: 0 8px 24px rgba(0,0,0,.3); white-space: nowrap; }
+.pickbar[hidden] { display: none; }
+.pickbar button { border: 0; border-radius: 99px; padding: 5px 12px; background: rgba(255,255,255,.25); color: #fff; font-weight: 600; }

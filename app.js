@@ -492,6 +492,11 @@ function renderZoneLog() {
 
 function setPicking(on) {
   picking = on;
+  // Telefonda pencere haritanın çoğunu kapatır: seçim sırasında küçült, alttaki çubukla yönlendir
+  const w = document.querySelector('.window[data-win="zones"]');
+  if (narrow.matches) w.classList.toggle("min", on);
+  $("pickBar").hidden = !on;
+  if (on) document.activeElement?.blur();
   $("zoneAdd").classList.toggle("picking", on);
   $("zoneAdd").textContent = on ? "İptal" : "Haritada yer seç";
   $("zoneHint").textContent = on ? "Haritada bölgenin merkezine dokun." : "Bölgeler sadece bu tarayıcıda saklanır.";
@@ -502,11 +507,11 @@ $("zoneForm").addEventListener("submit", (e) => {
   e.preventDefault();
   setPicking(!picking);
 });
+$("pickCancel").addEventListener("click", () => setPicking(false));
 $("zoneRadius").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) setSeg("zoneRadius", b.dataset.v); });
 map.on("click", (e) => {
   if (!picking) return;
-  const name = $("zoneName").value.trim().slice(0, 24);
-  if (!name) { setPicking(false); $("zoneName").focus(); return; }
+  const name = $("zoneName").value.trim().slice(0, 24) || "Bölge " + (zones.length + 1);
   zones.push({ name, lat: +e.latlng.lat.toFixed(6), lon: +e.latlng.lng.toFixed(6), r: +segValue("zoneRadius") });
   saveZones();
   $("zoneName").value = "";

@@ -135,7 +135,7 @@
       <div id="zoneList" class="triplist"></div>
       <form id="zoneForm" class="group">
         <span class="glabel">Yeni bölge</span>
-        <input id="zoneName" class="field" placeholder="Ad (ör. Ev)" maxlength="24" autocomplete="off" required>
+        <input id="zoneName" class="field" placeholder="Ad (ör. Ev)" maxlength="24" autocomplete="off">
         <div class="seg" id="zoneRadius" role="radiogroup" aria-label="Yarıçap">
           <button type="button" data-v="100" role="radio">100 m</button>
           <button type="button" data-v="250" role="radio" class="on">250 m</button>
@@ -183,6 +183,11 @@
     </div>
   </section>
 
+</div>
+
+<div id="pickBar" class="pickbar" hidden role="status">
+  <span>Haritada bölgenin merkezine dokun</span>
+  <button type="button" id="pickCancel">İptal</button>
 </div>
 
 <nav id="dock" aria-label="Dock">
