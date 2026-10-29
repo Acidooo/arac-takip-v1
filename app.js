@@ -16,15 +16,19 @@ const ESRI = "https://server.arcgisonline.com/ArcGIS/rest/services/";
 const esri = (name, opts) => L.tileLayer(ESRI + name + "/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19, ...opts });
 const OSM_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
 const dark = matchMedia("(prefers-color-scheme: dark)");
-// CARTO: açık temada Positron, koyu temada Dark Matter
-const cartoUrl = () => "https://{s}.basemaps.cartocdn.com/" + (dark.matches ? "dark_all" : "light_all") + "/{z}/{x}/{y}{r}.png";
-const carto = L.tileLayer(cartoUrl(), {
-  maxZoom: 20, subdomains: "abcd", attribution: OSM_ATTR + ' &copy; <a href="https://carto.com/attributions">CARTO</a>'
-});
-dark.addEventListener("change", () => carto.setUrl(cartoUrl()));
+// Sade: açık temada Esri Light Gray, koyu temada Dark Gray Canvas (anahtarsız; CARTO artık API anahtarı istiyor)
+const CANVAS_ATTR = "Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors, and the GIS User Community";
+const canvas = (tone) => [
+  esri("Canvas/World_" + tone + "_Gray_Base", { maxNativeZoom: 16, attribution: CANVAS_ATTR }),
+  esri("Canvas/World_" + tone + "_Gray_Reference", { maxNativeZoom: 16 }),
+];
+const plain = L.layerGroup();
+const fillPlain = () => { plain.clearLayers(); canvas(dark.matches ? "Dark" : "Light").forEach(l => plain.addLayer(l)); };
+fillPlain();
+dark.addEventListener("change", fillPlain);
 const baseLayers = {
   "OSM": L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: OSM_ATTR }),
-  "CARTO": carto,
+  "Sade": plain,
   "Hibrit": L.layerGroup([
     esri("World_Imagery", { attribution: "Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community" }),
     esri("Reference/World_Transportation"),
@@ -34,7 +38,8 @@ const baseLayers = {
 const LAYER_KEY = "mapLayer";
 let layerName = "OSM";
 try {
-  const saved = localStorage.getItem(LAYER_KEY) === "Sokak" ? "OSM" : localStorage.getItem(LAYER_KEY);  // eski ad
+  const OLD = { Sokak: "OSM", CARTO: "Sade" };  // eski adlar
+  const saved = OLD[localStorage.getItem(LAYER_KEY)] || localStorage.getItem(LAYER_KEY);
   if (baseLayers[saved]) layerName = saved;
 } catch {}
 function setLayer(name) {
