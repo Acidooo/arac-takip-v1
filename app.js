@@ -162,6 +162,7 @@ function update(p) {
   if (isDriving(p)) lastMoveTs = Math.max(lastMoveTs || 0, p.t);
   renderAgo();
   renderState();
+  if (zones.length) renderZones();
   if (replay) return;  // geçmiş oynatılırken harita canlı konuma kaymasın
   if (!fitted) { map.setView([p.lat, p.lon], 15); fitted = true; }
   else if ($("follow").checked) map.panTo([p.lat, p.lon]);
@@ -188,6 +189,7 @@ function connectLive() {
     const p = toPoint(m);
     if (!p || p.t < lastTs) return;
     points.push(p);
+    if ($("day").value === ymd(new Date())) { dayPoints.push(p); renderZoneLog(); }
     drawRoute();
     update(p);
   });
@@ -252,7 +254,7 @@ $("recenter").addEventListener("click", () => {
 const STOP_GAP = 180, MIN_TRIP_M = 300;
 const tripLayer = L.polyline([], { color: "#ff9f0a", weight: 5, opacity: .9, lineCap: "round", lineJoin: "round" });
 const ghost = L.marker([0, 0], { icon: L.divIcon({ className: "", html: '<div class="ghost"></div>', iconSize: [16, 16] }) });
-let trips = [], replay = null;  // replay: {trip, t, playing}
+let trips = [], dayPoints = [], replay = null;  // replay: {trip, t, playing}
 
 const pad = (n) => String(n).padStart(2, "0");
 const ymd = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -303,7 +305,9 @@ async function loadDay() {
   stopReplay();
   try {
     const msgs = await api(`/gw/devices/${DEVICE_ID}/messages`, { from, to, fields: FIELDS, filter: "position.latitude" });
-    trips = splitTrips(msgs.map(toPoint).filter(Boolean));
+    dayPoints = msgs.map(toPoint).filter(Boolean);
+    trips = splitTrips(dayPoints);
+    renderZoneLog();
   } catch (e) {
     trips = [];
     $("tripList").innerHTML = "";
@@ -402,6 +406,119 @@ $("backLive").addEventListener("click", () => {
   $("follow").checked = true;
   $("recenter").click();
 });
+
+// ---------- Bölgeler (geofence) ----------
+// Bölgeler sadece bu tarayıcının localStorage'ında durur; repoya veya flespi'ye gitmez.
+// Giriş/çıkışlar seçili günün mesajlarından sayfada hesaplanır. Sınırda GPS titremesi için 30 m pay bırakılır.
+const ZONE_KEY = "zones", ZONE_HYST = 30;
+let zones = [];
+try {
+  zones = (JSON.parse(localStorage.getItem(ZONE_KEY)) || []).filter(z =>
+    z && typeof z.name === "string" && Number.isFinite(z.lat) && Number.isFinite(z.lon) && Number.isFinite(z.r));
+} catch {}
+const zoneLayer = L.layerGroup().addTo(map);
+let picking = false;
+const saveZones = () => { try { localStorage.setItem(ZONE_KEY, JSON.stringify(zones)); } catch {} };
+const inZone = (z, p) => haversine(z, p) <= z.r;
+const rLabel = (r) => r >= 1000 ? r / 1000 + " km" : r + " m";
+
+function renderZones() {
+  zoneLayer.clearLayers();
+  const list = $("zoneList"); list.innerHTML = "";
+  const last = points[points.length - 1];
+  zones.forEach((z, i) => {
+    L.circle([z.lat, z.lon], { radius: z.r, color: "#0a84ff", weight: 2, dashArray: "6 6", fillOpacity: .08 })
+      .bindTooltip(z.name, { direction: "top" }).addTo(zoneLayer);
+    const row = document.createElement("div");
+    row.className = "zone" + (last && inZone(z, last) ? " in" : "");
+    const go = document.createElement("button");
+    go.type = "button"; go.className = "zn"; go.dataset.i = i;
+    const b = document.createElement("b"); b.textContent = z.name;
+    const sp = document.createElement("span"); sp.textContent = rLabel(z.r) + (last && inZone(z, last) ? " · araç içinde" : "");
+    go.append(b, sp);
+    const del = document.createElement("button");
+    del.type = "button"; del.className = "del"; del.dataset.del = i; del.textContent = "×";
+    del.setAttribute("aria-label", z.name + " bölgesini sil");
+    row.append(go, del);
+    list.append(row);
+  });
+  renderZoneNow();
+  renderZoneLog();
+}
+
+function renderZoneNow() {
+  const last = points[points.length - 1], el = $("zoneNow");
+  if (!zones.length) { el.className = "state"; $("zoneNowText").textContent = "Henüz bölge yok"; return; }
+  if (!last) { el.className = "state"; $("zoneNowText").textContent = "–"; return; }
+  const inside = zones.filter(z => inZone(z, last)).map(z => z.name);
+  el.className = "state " + (inside.length ? "drive" : "park");
+  $("zoneNowText").textContent = inside.length ? "Şu an: " + inside.join(", ") : "Şu an hiçbir bölgede değil";
+}
+
+function zoneEvents(pts) {
+  const ev = [];
+  for (const z of zones) {
+    let state = null;
+    for (const p of pts) {
+      const d = haversine(z, p);
+      const next = d <= z.r ? true : d > z.r + ZONE_HYST ? false : state;
+      if (state !== null && next !== state) ev.push({ t: p.t, name: z.name, enter: next });
+      state = next;
+    }
+  }
+  return ev.sort((a, b) => a.t - b.t);
+}
+
+function renderZoneLog() {
+  $("zoneDay").textContent = $("day").value ? new Date($("day").value + "T12:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "long" }) : "–";
+  const log = $("zoneLog"); log.innerHTML = "";
+  const p = document.createElement("p");
+  if (!zones.length) { p.textContent = "Bölge ekleyince giriş ve çıkışlar burada görünür."; log.append(p); return; }
+  const ev = zoneEvents(dayPoints);
+  if (!ev.length) { p.textContent = "Bu gün giriş veya çıkış yok."; log.append(p); return; }
+  for (const e of ev.reverse()) {
+    const row = document.createElement("div");
+    const t = document.createElement("b"); t.textContent = hm(e.t);
+    const n = document.createElement("span"); n.textContent = e.name;
+    const k = document.createElement("span"); k.className = e.enter ? "in" : "out"; k.textContent = e.enter ? "giriş" : "çıkış";
+    row.append(t, n, k); log.append(row);
+  }
+}
+
+function setPicking(on) {
+  picking = on;
+  $("zoneAdd").classList.toggle("picking", on);
+  $("zoneAdd").textContent = on ? "İptal" : "Haritada yer seç";
+  $("zoneHint").textContent = on ? "Haritada bölgenin merkezine dokun." : "Bölgeler sadece bu tarayıcıda saklanır.";
+  map.getContainer().classList.toggle("picking", on);
+}
+
+$("zoneForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  setPicking(!picking);
+});
+$("zoneRadius").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) setSeg("zoneRadius", b.dataset.v); });
+map.on("click", (e) => {
+  if (!picking) return;
+  const name = $("zoneName").value.trim().slice(0, 24);
+  if (!name) { setPicking(false); $("zoneName").focus(); return; }
+  zones.push({ name, lat: +e.latlng.lat.toFixed(6), lon: +e.latlng.lng.toFixed(6), r: +segValue("zoneRadius") });
+  saveZones();
+  $("zoneName").value = "";
+  setPicking(false);
+  renderZones();
+});
+$("zoneList").addEventListener("click", (e) => {
+  const del = e.target.closest("[data-del]");
+  if (del) {
+    const z = zones[+del.dataset.del];
+    if (z && confirm(z.name + " bölgesi silinsin mi?")) { zones.splice(+del.dataset.del, 1); saveZones(); renderZones(); }
+    return;
+  }
+  const go = e.target.closest("[data-i]");
+  if (go) { const z = zones[+go.dataset.i]; $("follow").checked = false; map.fitBounds(L.latLng(z.lat, z.lon).toBounds(z.r * 2), { padding: [60, 60] }); }
+});
+renderZones();
 
 // ---------- Pencere yöneticisi ----------
 // Her .window[data-win]: başlıktan sürüklenir, sarı düğme küçültür, kırmızı kapatır, Dock geri açar.

@@ -175,3 +175,21 @@ button.primary:active { filter: brightness(.9); }
 .playinfo { display: flex; justify-content: space-between; font-variant-numeric: tabular-nums; }
 .playinfo span { color: var(--muted); }
 .ghost { width: 16px; height: 16px; border-radius: 50%; background: #ff9f0a; border: 3px solid #fff; box-shadow: 0 2px 8px rgba(0,0,0,.4); }
+
+/* ---------- Bölgeler ---------- */
+.window[data-win="zones"] { left: 16px; top: 380px; width: 300px; }
+.field { width: 100%; height: 34px; padding: 0 10px; border-radius: 10px; border: 0; background: var(--fill); }
+#zoneRadius button { padding: 5px 4px; }
+#zoneAdd.picking { background: var(--accent); color: #fff; }
+.zone { display: flex; align-items: center; gap: 8px; border-radius: 12px; padding: 6px 6px 6px 10px; background: var(--fill); }
+.zone .zn { flex: 1; min-width: 0; border: 0; background: none; padding: 0; text-align: left; display: grid; }
+.zone .zn span { color: var(--muted); font-size: 12px; }
+.zone.in { box-shadow: inset 3px 0 0 var(--ok); }
+.zone .del { border: 0; background: none; width: 28px; height: 28px; border-radius: 8px; color: var(--muted); font-size: 16px; }
+.zone .del:hover { background: var(--fill-on); color: var(--bad); }
+.zonelog { display: grid; gap: 2px; max-height: 160px; overflow-y: auto; font-size: 13px; font-variant-numeric: tabular-nums; }
+.zonelog p { margin: 0; color: var(--muted); }
+.zonelog div { display: flex; gap: 8px; }
+.zonelog b { width: 42px; flex: none; }
+.zonelog .in { color: var(--ok); } .zonelog .out { color: var(--warn); }
+.leaflet-container.picking { cursor: crosshair; }

@@ -114,6 +114,37 @@
     </div>
   </section>
 
+  <section class="window" data-win="zones" aria-label="Bölgeler">
+    <header class="titlebar">
+      <div class="lights">
+        <button class="light close" data-act="close" type="button" aria-label="Kapat"></button>
+        <button class="light min" data-act="min" type="button" aria-label="Küçült"></button>
+        <span class="light zoom" aria-hidden="true"></span>
+      </div>
+      <span class="wtitle">Bölgeler</span>
+    </header>
+    <div class="wbody">
+      <div class="state" id="zoneNow"><i></i><span id="zoneNowText">–</span></div>
+      <div id="zoneList" class="triplist"></div>
+      <form id="zoneForm" class="group">
+        <span class="glabel">Yeni bölge</span>
+        <input id="zoneName" class="field" placeholder="Ad (ör. Ev)" maxlength="24" autocomplete="off" required>
+        <div class="seg" id="zoneRadius" role="radiogroup" aria-label="Yarıçap">
+          <button type="button" data-v="100" role="radio">100 m</button>
+          <button type="button" data-v="250" role="radio" class="on">250 m</button>
+          <button type="button" data-v="500" role="radio">500 m</button>
+          <button type="button" data-v="1000" role="radio">1 km</button>
+        </div>
+        <button type="submit" class="glassbtn wide" id="zoneAdd">Haritada yer seç</button>
+        <p class="hint small" id="zoneHint">Bölgeler sadece bu tarayıcıda saklanır.</p>
+      </form>
+      <div class="group">
+        <span class="glabel">Giriş / çıkış · <span id="zoneDay">–</span></span>
+        <div id="zoneLog" class="zonelog"></div>
+      </div>
+    </div>
+  </section>
+
 </div>
 
 <nav id="dock" aria-label="Dock">
@@ -125,6 +156,9 @@
   </button>
   <button type="button" class="dock-item" data-toggle="trips" title="Yolculuklar">
     <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20zm0 2a8 8 0 1 0 0 16 8 8 0 0 0 0-16zm1 3v4.6l3.5 2.1-1 1.7L11 12.7V7z"/></svg>
+  </button>
+  <button type="button" class="dock-item" data-toggle="zones" title="Bölgeler">
+    <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20zm0 2a8 8 0 1 0 0 16 8 8 0 0 0 0-16zm0 3a4 4 0 0 1 4 4c0 3-4 7-4 7s-4-4-4-7a4 4 0 0 1 4-4zm0 2.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z"/></svg>
   </button>
   <span class="dock-sep"></span>
   <button type="button" class="dock-item" id="recenter" title="Aracı ortala">
