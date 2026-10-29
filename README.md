@@ -9,12 +9,17 @@ Teltonika FMB120 için canlı harita. Veriyi flespi alır; bu statik sayfa GitHu
 - Harita: Sokak (OpenStreetMap) veya Hibrit (Esri uydu + yol/yer etiketleri).
 - Araç penceresinde durum: Seyirde / Kontak açık, duruyor / Park halinde ve park süresi (kontak bilgisi `engine.ignition.status`, yoksa hız).
 - Yolculuklar penceresi: gün seçilir, o günün mesajları sayfada yolculuklara bölünür (saat, süre, km, maks hız). Bir yolculuk seçilince rota turuncu çizilir ve zaman çubuğuyla 30×/120×/600× hızda oynatılır. Adres çözümleme yok; konum üçüncü bir servise gönderilmez.
+- Bölgeler penceresi (geofence): ad + yarıçap seçilip haritaya dokunularak bölge eklenir. Şu an hangi bölgede olduğu ve seçili günün giriş/çıkışları gösterilir. Bölgeler sadece bu tarayıcının localStorage'ında durur; repoya veya flespi'ye gitmez. Sayfa kapalıyken bildirim yok (ileride flespi + Telegram).
+- Akü kutusu: cihazın beslendiği araç aküsü voltajı (`external.powersource.voltage`). Kontak kapalıyken 12,0 V altı kırmızı görünür.
+- Rapor penceresi: son 7 veya 30 günün toplam km, sürüş süresi, yolculuk sayısı, günlük ortalama, maks hız ve günlük km grafiği. Hepsi sayfada hesaplanır.
+- Bakım penceresi: göstergedeki km girilir; cihaz toplam km (`vehicle.mileage`) gönderiyorsa sonrası otomatik ilerler. Km veya ay aralıklı hatırlatmalar (yağ, muayene, sigorta + özel); yaklaşan/geçen olanlar renklenir, Dock simgesinde kırmızı nokta çıkar. Bilgiler sadece bu tarayıcıda saklanır.
+- Ana ekrana eklenebilir (PWA): telefonda tarayıcı menüsünden "Ana ekrana ekle". `sw.js` sadece sitenin kendi dosyalarını önbelleğe alır; flespi verisi ve token önbelleğe girmez.
 
 ## Arayüz
 
 - Apple tarzı cam (buzlu cam, blur) pencereler: macOS gibi başlık çubuğu, kırmızı = kapat, sarı = küçült (ya da başlığa çift tıkla).
 - Pencereler masaüstünde başlıktan sürüklenir; konumları bu tarayıcıda hatırlanır. Telefonda üstte tek pencere açık kalır.
-- Alttaki Dock: Araç, Harita ve Yolculuklar pencerelerini açar/kapatır, aracı ortalar, çıkış yapar.
+- Alttaki Dock: Araç, Harita, Yolculuklar, Bölgeler, Rapor ve Bakım pencerelerini açar/kapatır (ilk açılışta sadece Araç ve Harita açık), aracı ortalar, çıkış yapar.
 - Yeni panel eklemek: `index.html` içinde `#desktop` altına `<section class="window" data-win="ad">` ve Dock'a `data-toggle="ad"` düğmesi eklemek yeterli; pencere yöneticisi gerisini halleder.
 - Açık/koyu tema sistem ayarına göre otomatik.
 

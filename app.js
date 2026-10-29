@@ -1,7 +1,7 @@
 const DEVICE_ID = 9363738;
 const API = "https://flespi.io";
 const MQTT_URL = "wss://mqtt.flespi.io:443";
-const FIELDS = "timestamp,position.latitude,position.longitude,position.speed,position.direction,engine.ignition.status";
+const FIELDS = "timestamp,position.latitude,position.longitude,position.speed,position.direction,engine.ignition.status,external.powersource.voltage,vehicle.mileage";
 const TOKEN_KEY = "flespiToken";
 
 const $ = (id) => document.getElementById(id);
@@ -86,7 +86,8 @@ function toPoint(m) {
   if (typeof lat !== "number" || typeof lon !== "number" || Math.abs(lat) > 90 || Math.abs(lon) > 180) return null;
   const ign = m["engine.ignition.status"];
   return { t: m.timestamp, lat, lon, speed: m["position.speed"] ?? null, dir: m["position.direction"] ?? null,
-    ign: typeof ign === "boolean" ? ign : null };
+    ign: typeof ign === "boolean" ? ign : null, volt: m["external.powersource.voltage"] ?? null,
+    mil: typeof m["vehicle.mileage"] === "number" ? m["vehicle.mileage"] : null };
 }
 
 async function api(path, data) {
@@ -149,7 +150,6 @@ function dur(s) {
 
 function drawRoute() {
   route.setLatLngs(points.length > 1 ? points.map(p => [p.lat, p.lon]) : []);
-  $("count").textContent = points.length || "–";
 }
 
 function update(p) {
@@ -165,6 +165,12 @@ function update(p) {
     if (icon) icon.style.transform = rot;
   }
   if (isDriving(p)) lastMoveTs = Math.max(lastMoveTs || 0, p.t);
+  if (typeof p.volt === "number") {
+    // Kontak kapalıyken 12,0 V altı: akü zayıflıyor olabilir
+    $("batt").textContent = p.volt.toLocaleString("tr-TR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + " V";
+    $("battTile").classList.toggle("low", p.volt < 12 && !isDriving(p));
+  }
+  if (p.mil != null) { deviceMil = p.mil; renderService(); }
   renderAgo();
   renderState();
   if (zones.length) renderZones();
@@ -211,6 +217,7 @@ async function start() {
     await loadHistory();
     loadLastMove().catch(() => {});
     loadDay();
+    loadReport();
     status("wait", "Canlı bağlantı kuruluyor…");
     connectLive();
   } catch (e) {
@@ -492,6 +499,11 @@ function renderZoneLog() {
 
 function setPicking(on) {
   picking = on;
+  // Telefonda pencere haritanın çoğunu kapatır: seçim sırasında küçült, alttaki çubukla yönlendir
+  const w = document.querySelector('.window[data-win="zones"]');
+  if (narrow.matches) w.classList.toggle("min", on);
+  $("pickBar").hidden = !on;
+  if (on) document.activeElement?.blur();
   $("zoneAdd").classList.toggle("picking", on);
   $("zoneAdd").textContent = on ? "İptal" : "Haritada yer seç";
   $("zoneHint").textContent = on ? "Haritada bölgenin merkezine dokun." : "Bölgeler sadece bu tarayıcıda saklanır.";
@@ -502,11 +514,11 @@ $("zoneForm").addEventListener("submit", (e) => {
   e.preventDefault();
   setPicking(!picking);
 });
+$("pickCancel").addEventListener("click", () => setPicking(false));
 $("zoneRadius").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) setSeg("zoneRadius", b.dataset.v); });
 map.on("click", (e) => {
   if (!picking) return;
-  const name = $("zoneName").value.trim().slice(0, 24);
-  if (!name) { setPicking(false); $("zoneName").focus(); return; }
+  const name = $("zoneName").value.trim().slice(0, 24) || "Bölge " + (zones.length + 1);
   zones.push({ name, lat: +e.latlng.lat.toFixed(6), lon: +e.latlng.lng.toFixed(6), r: +segValue("zoneRadius") });
   saveZones();
   $("zoneName").value = "";
@@ -524,6 +536,160 @@ $("zoneList").addEventListener("click", (e) => {
   if (go) { const z = zones[+go.dataset.i]; $("follow").checked = false; map.fitBounds(L.latLng(z.lat, z.lon).toBounds(z.r * 2), { padding: [60, 60] }); }
 });
 renderZones();
+
+// ---------- Rapor ----------
+// Son 7/30 günün mesajları gün gün yolculuklara bölünür; km, sürüş süresi ve maks hız sayfada hesaplanır.
+async function loadReport() {
+  const days = +segValue("repDays");
+  const start = new Date(); start.setHours(0, 0, 0, 0); start.setDate(start.getDate() - days + 1);
+  $("repNote").textContent = "Yükleniyor…";
+  let pts;
+  try {
+    const msgs = await api(`/gw/devices/${DEVICE_ID}/messages`,
+      { from: Math.floor(start / 1000), to: Math.floor(Date.now() / 1000), fields: FIELDS, filter: "position.latitude" });
+    pts = msgs.map(toPoint).filter(Boolean);
+  } catch (e) { $("repNote").textContent = "Veri alınamadı: " + e.message; return; }
+  const byDay = new Map();
+  for (let i = 0; i < days; i++) { const d = new Date(start); d.setDate(d.getDate() + i); byDay.set(ymd(d), []); }
+  for (const p of pts) byDay.get(ymd(new Date(p.t * 1000)))?.push(p);
+  let totalM = 0, secs = 0, n = 0, vmax = 0;
+  const rows = [...byDay].map(([day, dp]) => {
+    const tr = splitTrips(dp), m = tr.reduce((a, t) => a + t.dist, 0);
+    totalM += m; n += tr.length;
+    for (const t of tr) { secs += t.t1 - t.t0; vmax = Math.max(vmax, t.vmax); }
+    return { day, m, trips: tr.length };
+  });
+  $("repKm").textContent = Math.round(totalM / 1000) + " km";
+  $("repTime").textContent = dur(secs);
+  $("repTrips").textContent = n;
+  $("repAvg").textContent = (totalM / 1000 / days).toLocaleString("tr-TR", { maximumFractionDigits: 1 }) + " km";
+  $("repMax").textContent = vmax ? Math.round(vmax) + " km/sa" : "–";
+  const chart = $("repChart"); chart.innerHTML = "";
+  const top = Math.max(1, ...rows.map(r => r.m)), today = ymd(new Date());
+  for (const r of rows) {
+    const d = new Date(r.day + "T12:00:00");
+    const bar = document.createElement("div");
+    bar.className = "bar" + (r.m ? "" : " zero") + (r.day === today ? " today" : "");
+    bar.title = d.toLocaleDateString("tr-TR", { weekday: "short", day: "numeric", month: "short" }) +
+      ": " + km(r.m) + ", " + r.trips + " yolculuk";
+    const fill = document.createElement("div"); fill.className = "fill";
+    fill.style.height = Math.round(r.m / top * 100) + "%";  // CSSOM: CSP'ye takılmaz
+    const lab = document.createElement("small");
+    lab.textContent = days <= 7 ? d.toLocaleDateString("tr-TR", { weekday: "short" }) : (d.getDate() % 5 === 1 ? d.getDate() : "");
+    bar.append(fill, lab); chart.append(bar);
+  }
+  const first = pts.length ? new Date(pts[0].t * 1000) : null;
+  $("repNote").textContent = first && first > new Date(start.getTime() + 86400000)
+    ? "flespi'de " + first.toLocaleDateString("tr-TR") + " öncesine ait veri yok." : "";
+}
+$("repDays").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b || b.classList.contains("on")) return;
+  setSeg("repDays", b.dataset.v); if (token) loadReport();
+});
+
+// Ana ekrana eklenebilir uygulama: kabuk dosyaları önbelleğe alınır, flespi verisi asla önbelleğe girmez
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+
+// ---------- Bakım hatırlatma ----------
+// Kullanıcı göstergedeki km'yi girer. Cihaz toplam km (vehicle.mileage) gönderiyorsa sonraki km'ler ondan
+// otomatik ilerler; göndermiyorsa km elle güncellenir. Her şey bu tarayıcının localStorage'ında.
+const SVC_KEY = "service", SOON_KM = 1000, SOON_DAYS = 30;
+let deviceMil = null;
+let svc = { odo: null, odoDevice: null, odoAt: null, items: null };
+try { Object.assign(svc, JSON.parse(localStorage.getItem(SVC_KEY)) || {}); } catch {}
+if (!Array.isArray(svc.items)) svc.items = [
+  { name: "Yağ ve filtre", type: "km", every: 10000, last: null },
+  { name: "Muayene", type: "months", every: 24, last: null },
+  { name: "Trafik sigortası", type: "months", every: 12, last: null },
+];
+const saveSvc = () => { try { localStorage.setItem(SVC_KEY, JSON.stringify(svc)); } catch {} };
+const fmtKm = (n) => Math.round(n).toLocaleString("tr-TR") + " km";
+
+function currentOdo() {
+  if (svc.odo == null) return null;
+  if (deviceMil != null && svc.odoDevice != null) return svc.odo + Math.max(0, deviceMil - svc.odoDevice);
+  return svc.odo;
+}
+function addMonths(ts, n) { const d = new Date(ts); d.setMonth(d.getMonth() + n); return d.getTime(); }
+
+function renderService() {
+  const odo = currentOdo();
+  $("odoNote").textContent = odo == null ? "Önce göstergedeki km'yi gir."
+    : "Şu an yaklaşık " + fmtKm(odo) + (deviceMil != null && svc.odoDevice != null ? " (cihazdan otomatik ilerliyor)" : " (elle güncellenir)");
+  const list = $("svcList"); list.innerHTML = "";
+  let alert = false;
+  svc.items.forEach((it, i) => {
+    let left = "", cls = "", lastTxt;
+    if (it.type === "km") {
+      lastTxt = it.last == null ? "Son yapılış girilmedi" : "Son: " + fmtKm(it.last);
+      if (it.last != null && odo != null) {
+        const rem = it.last + it.every - odo;
+        left = rem <= 0 ? fmtKm(-rem) + " geçti" : fmtKm(rem) + " kaldı";
+        cls = rem <= 0 ? "due" : rem <= SOON_KM ? "soon" : "";
+      }
+    } else {
+      lastTxt = it.last == null ? "Son yapılış girilmedi" : "Son: " + new Date(it.last).toLocaleDateString("tr-TR");
+      if (it.last != null) {
+        const days = Math.ceil((addMonths(it.last, it.every) - Date.now()) / 86400000);
+        left = days <= 0 ? -days + " gün geçti" : days + " gün kaldı (" + new Date(addMonths(it.last, it.every)).toLocaleDateString("tr-TR") + ")";
+        cls = days <= 0 ? "due" : days <= SOON_DAYS ? "soon" : "";
+      }
+    }
+    if (cls) alert = true;
+    const row = document.createElement("div"); row.className = "svc " + cls;
+    const b = document.createElement("b"); b.textContent = it.name;
+    const every = document.createElement("span"); every.textContent = "Her " + (it.type === "km" ? fmtKm(it.every) : it.every + " ay") + " · " + lastTxt;
+    const l = document.createElement("span"); l.className = "left"; l.textContent = left;
+    const done = document.createElement("button"); done.type = "button"; done.className = "done"; done.dataset.done = i; done.textContent = "Yapıldı";
+    done.title = "Son yapıldığı km'yi veya tarihi kaydet";
+    const del = document.createElement("button"); del.type = "button"; del.className = "del"; del.dataset.del = i; del.textContent = "×";
+    del.setAttribute("aria-label", it.name + " hatırlatmasını sil");
+    row.append(b, done, del, every); if (left) row.append(l);
+    list.append(row);
+  });
+  $("svcBadge").hidden = !alert;
+}
+
+$("odoForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const v = Math.round(+$("odoInput").value);
+  if (!(v >= 0 && v < 2e6)) return;
+  Object.assign(svc, { odo: v, odoDevice: deviceMil, odoAt: Date.now() });
+  saveSvc(); $("odoInput").value = ""; renderService();
+});
+$("svcType").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) setSeg("svcType", b.dataset.v); });
+$("svcForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const every = Math.round(+$("svcEvery").value), type = segValue("svcType");
+  if (!(every > 0)) return;
+  svc.items.push({ name: $("svcName").value.trim().slice(0, 30) || "Hatırlatma", type, every, last: null });
+  saveSvc(); $("svcName").value = ""; $("svcEvery").value = ""; renderService();
+});
+$("svcList").addEventListener("click", (e) => {
+  const d = e.target.closest("[data-done]"), x = e.target.closest("[data-del]");
+  if (d) {
+    const it = svc.items[+d.dataset.done];
+    // Varsayılan şimdiki km / bugün; geçmişte yapıldıysa kullanıcı düzeltir
+    if (it.type === "km") {
+      const odo = currentOdo();
+      const v = prompt(it.name + " kaçıncı km'de yapıldı?", odo == null ? "" : Math.round(odo));
+      if (v == null || !(+v >= 0)) return;
+      it.last = Math.round(+v);
+    } else {
+      const v = prompt(it.name + " hangi tarihte yapıldı? (GG.AA.YYYY)", new Date().toLocaleDateString("tr-TR"));
+      const m = v && v.trim().match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/);
+      if (!m) return;
+      const t = new Date(+m[3], +m[2] - 1, +m[1]).getTime();
+      if (!(t > 0) || t > Date.now() + 86400000) return;
+      it.last = t;
+    }
+    saveSvc(); renderService();
+  } else if (x) {
+    const it = svc.items[+x.dataset.del];
+    if (it && confirm(it.name + " silinsin mi?")) { svc.items.splice(+x.dataset.del, 1); saveSvc(); renderService(); }
+  }
+});
+renderService();
 
 // ---------- Pencere yöneticisi ----------
 // Her .window[data-win]: başlıktan sürüklenir, sarı düğme küçültür, kırmızı kapatır, Dock geri açar.
@@ -559,7 +725,8 @@ for (const w of wins) {
   const id = w.dataset.win, st = winState[id] || {};
   if (st.x != null && !narrow.matches) { w.style.left = st.x + "px"; w.style.top = st.y + "px"; w.style.right = "auto"; clamp(w); }
   if (st.min) w.classList.add("min");
-  const closed = st.closed ?? (narrow.matches && id !== "vehicle");
+  // İlk açılışta sadece Araç (masaüstünde Harita da) açık; diğerleri Dock'tan açılır
+  const closed = st.closed ?? (narrow.matches ? id !== "vehicle" : !["vehicle", "layers"].includes(id));
   w.classList.toggle("closed", closed);
   document.querySelector(`.dock-item[data-toggle="${id}"]`)?.classList.toggle("open", !closed);
 

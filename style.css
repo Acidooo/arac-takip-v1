@@ -193,3 +193,46 @@ button.primary:active { filter: brightness(.9); }
 .zonelog b { width: 42px; flex: none; }
 .zonelog .in { color: var(--ok); } .zonelog .out { color: var(--warn); }
 .leaflet-container.picking { cursor: crosshair; }
+
+/* ---------- Akü ---------- */
+#battTile.low b { color: var(--bad); }
+
+/* ---------- Rapor ---------- */
+.window[data-win="report"] { left: 336px; top: 16px; width: 320px; }
+.tiles.three { grid-template-columns: 1fr 1fr 1fr; }
+.bars { display: flex; align-items: flex-end; gap: 3px; height: 110px; padding-top: 14px; }
+.bars .bar { flex: 1; min-width: 0; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 3px; }
+.bars .fill { width: 100%; min-height: 2px; border-radius: 4px 4px 2px 2px; background: var(--accent); opacity: .85; }
+.bars .bar.zero .fill { background: var(--fill); opacity: 1; }
+.bars .bar.today .fill { opacity: 1; }
+.bars small { font-size: 9px; color: var(--muted); font-variant-numeric: tabular-nums; line-height: 1; }
+.bars .bar:hover .fill { opacity: 1; filter: brightness(1.1); }
+.tiles.three b { font-size: 13px; white-space: nowrap; }
+
+/* ---------- Form alanları ---------- */
+/* Tarayıcının varsayılan beyaz kutusunu kapat; cam temaya ve açık/koyu moda uy */
+:root { color-scheme: light dark; }
+.field, #day, #tokenInput { -webkit-appearance: none; appearance: none; color: var(--fg); background: var(--fill);
+  border: 1px solid var(--hair); outline-offset: 0; }
+.field::placeholder, #tokenInput::placeholder { color: var(--muted); opacity: 1; }
+.field:focus, #day:focus, #tokenInput:focus { background: var(--fill-on); border-color: var(--accent); outline: none; }
+.field:-webkit-autofill, #tokenInput:-webkit-autofill { -webkit-text-fill-color: var(--fg); box-shadow: 0 0 0 40px var(--glass-strong) inset; }
+
+.pickbar { position: fixed; z-index: 1150; left: 50%; transform: translateX(-50%); bottom: calc(max(14px, env(safe-area-inset-bottom)) + 70px);
+  display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 14px; border-radius: 99px; color: #fff; font-weight: 600; font-size: 13px;
+  background: rgba(10,132,255,.92); box-shadow: 0 8px 24px rgba(0,0,0,.3); white-space: nowrap; }
+.pickbar[hidden] { display: none; }
+.pickbar button { border: 0; border-radius: 99px; padding: 5px 12px; background: rgba(255,255,255,.25); color: #fff; font-weight: 600; }
+
+/* ---------- Bakım ---------- */
+.window[data-win="service"] { left: 672px; top: 16px; width: 310px; }
+.svc { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 2px 6px; border-radius: 12px; padding: 7px 6px 7px 10px; background: var(--fill); }
+.svc b { font-size: 14px; } .svc span { grid-column: 1; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.svc.soon { box-shadow: inset 3px 0 0 var(--warn); } .svc.due { box-shadow: inset 3px 0 0 var(--bad); }
+.svc.due span.left { color: var(--bad); font-weight: 600; } .svc.soon span.left { color: var(--warn); font-weight: 600; }
+.svc .done { grid-row: 1 / span 3; grid-column: 2; border: 0; border-radius: 8px; padding: 5px 9px; font-size: 12px; font-weight: 600; background: var(--fill-on); }
+.svc .del { grid-row: 1 / span 3; grid-column: 3; border: 0; background: none; width: 28px; height: 28px; border-radius: 8px; color: var(--muted); font-size: 16px; }
+.svc .del:hover { color: var(--bad); }
+#odoInput, #svcEvery { flex: 1; min-width: 0; }
+.dock-item .badge { position: absolute; top: 6px; right: 6px; width: 9px; height: 9px; border-radius: 50%; background: var(--bad); box-shadow: 0 0 0 2px var(--glass-strong); }
+.dock-item .badge[hidden] { display: none; }
