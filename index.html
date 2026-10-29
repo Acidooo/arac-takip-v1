@@ -2,10 +2,12 @@
 <html lang="tr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: https://tile.openstreetmap.org https://server.arcgisonline.com; connect-src https://flespi.io wss://mqtt.flespi.io; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin">
 <meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <title>Araç Takip</title>
 <link rel="stylesheet" href="vendor/leaflet.css">
 <link rel="stylesheet" href="style.css">
@@ -13,35 +15,104 @@
 <body>
 <div id="map"></div>
 
-<div class="panel">
-  <div class="row">
-    <span id="dot" class="dot" title="Bağlantı durumu"></span>
-    <span class="title">Araba</span>
-    <select id="hours" title="Rota süresi">
-      <option value="1">Son 1 saat</option>
-      <option value="6" selected>Son 6 saat</option>
-      <option value="24">Son 24 saat</option>
-    </select>
-  </div>
-  <div class="stats">
-    <div><span>Hız</span><b id="speed">–</b></div>
-    <div><span>Son konum</span><b id="ago">–</b></div>
-  </div>
-  <div class="row">
-    <label class="chk"><input type="checkbox" id="follow" checked> Aracı takip et</label>
-    <span class="grow"></span>
-    <button id="logout" type="button" title="Token'ı bu tarayıcıdan sil">Çıkış</button>
-  </div>
-  <div id="msg"></div>
+<!-- Pencereler: .window[data-win] olan her öğe sürüklenebilir, küçültülebilir ve Dock'tan açılıp kapanır.
+     Yeni panel eklemek için aynı yapıda bir <section> ve Dock'a bir düğme eklemek yeterli. -->
+<div id="desktop">
+
+  <section class="window" data-win="vehicle" aria-label="Araç">
+    <header class="titlebar">
+      <div class="lights">
+        <button class="light close" data-act="close" type="button" aria-label="Kapat"></button>
+        <button class="light min" data-act="min" type="button" aria-label="Küçült"></button>
+        <span class="light zoom" aria-hidden="true"></span>
+      </div>
+      <span class="wtitle">Araba</span>
+      <span id="pill" class="pill wait"><i class="dot"></i><span id="pillText">Bağlanıyor</span></span>
+    </header>
+    <div class="wbody">
+      <div class="hero">
+        <div class="speed"><b id="speed">–</b><span>km/sa</span></div>
+        <div class="heading" title="Yön"><svg viewBox="0 0 24 24" id="compass"><path d="M12 2l6 18-6-4-6 4z"/></svg></div>
+      </div>
+      <div class="tiles">
+        <div class="tile"><span>Son konum</span><b id="ago">–</b></div>
+        <div class="tile"><span>Rota noktası</span><b id="count">–</b></div>
+      </div>
+      <div class="group">
+        <span class="glabel">Rota</span>
+        <div class="seg" id="hours" role="radiogroup" aria-label="Rota süresi">
+          <button type="button" data-v="1" role="radio">1 sa</button>
+          <button type="button" data-v="6" role="radio" class="on">6 sa</button>
+          <button type="button" data-v="24" role="radio">24 sa</button>
+        </div>
+      </div>
+      <label class="switch-row">
+        <span>Aracı takip et</span>
+        <input type="checkbox" id="follow" class="switch" checked>
+      </label>
+      <div id="msg" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section class="window" data-win="layers" aria-label="Harita">
+    <header class="titlebar">
+      <div class="lights">
+        <button class="light close" data-act="close" type="button" aria-label="Kapat"></button>
+        <button class="light min" data-act="min" type="button" aria-label="Küçült"></button>
+        <span class="light zoom" aria-hidden="true"></span>
+      </div>
+      <span class="wtitle">Harita</span>
+    </header>
+    <div class="wbody">
+      <div class="seg" id="layerSeg" role="radiogroup" aria-label="Harita katmanı">
+        <button type="button" data-v="Sokak" role="radio">Sokak</button>
+        <button type="button" data-v="Hibrit" role="radio">Hibrit</button>
+      </div>
+      <div class="btnrow">
+        <button type="button" class="glassbtn" id="zoomIn" aria-label="Yakınlaştır">＋</button>
+        <button type="button" class="glassbtn" id="zoomOut" aria-label="Uzaklaştır">－</button>
+        <button type="button" class="glassbtn wide" id="fitRoute">Rotayı göster</button>
+      </div>
+    </div>
+  </section>
+
 </div>
 
+<nav id="dock" aria-label="Dock">
+  <button type="button" class="dock-item" data-toggle="vehicle" title="Araç">
+    <svg viewBox="0 0 24 24"><path d="M5 11l1.6-4.2A2 2 0 0 1 8.5 5.5h7a2 2 0 0 1 1.9 1.3L19 11v6a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H8v1a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1zm2.2 0h9.6l-1.2-3.3a.5.5 0 0 0-.5-.3H8.9a.5.5 0 0 0-.5.3zM7.5 14.5a1.2 1.2 0 1 0 0-2.4 1.2 1.2 0 0 0 0 2.4zm9 0a1.2 1.2 0 1 0 0-2.4 1.2 1.2 0 0 0 0 2.4z"/></svg>
+  </button>
+  <button type="button" class="dock-item" data-toggle="layers" title="Harita">
+    <svg viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5zm-7.3 8.4L12 15.5l7.3-4.1L21 12.4l-9 5-9-5zm0 4L12 19.5l7.3-4.1 1.7 1-9 5-9-5z"/></svg>
+  </button>
+  <span class="dock-sep"></span>
+  <button type="button" class="dock-item" id="recenter" title="Aracı ortala">
+    <svg viewBox="0 0 24 24"><path d="M12 8a4 4 0 1 1 0 8 4 4 0 0 1 0-8zm-1-6h2v3.1A7 7 0 0 1 18.9 11H22v2h-3.1A7 7 0 0 1 13 18.9V22h-2v-3.1A7 7 0 0 1 5.1 13H2v-2h3.1A7 7 0 0 1 11 5.1zm1 5a5 5 0 1 0 0 10 5 5 0 0 0 0-10z"/></svg>
+  </button>
+  <button type="button" class="dock-item" id="logout" title="Çıkış (token'ı bu tarayıcıdan sil)">
+    <svg viewBox="0 0 24 24"><path d="M10 3h8a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-8v-2h8V5h-8zm-.6 4.6L10.8 9l-2 2H16v2H8.8l2 2-1.4 1.4L5 12z"/></svg>
+  </button>
+</nav>
+
 <div id="login">
-  <form class="box" id="loginForm">
-    <b>flespi token</b>
-    <p class="hint">Salt-okuma token'ını yapıştır. Token sadece flespi'ye gönderilir.</p>
-    <input id="tokenInput" type="password" autocomplete="off" spellcheck="false" placeholder="Token" required>
-    <label class="chk"><input type="checkbox" id="remember"> Bu cihazda hatırla (kapalıysa sekme kapanınca silinir)</label>
-    <button class="primary" type="submit">Giriş</button>
+  <form class="window modal" id="loginForm">
+    <header class="titlebar">
+      <div class="lights"><span class="light close"></span><span class="light min"></span><span class="light zoom"></span></div>
+      <span class="wtitle">Giriş</span>
+    </header>
+    <div class="wbody">
+      <div class="app-icon"><svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 1 7 7c0 5.2-7 13-7 13S5 14.2 5 9a7 7 0 0 1 7-7zm0 4.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z"/></svg></div>
+      <b class="ltitle">Araç Takip</b>
+      <p class="hint">flespi salt-okuma token'ını yapıştır. Token sadece flespi'ye gönderilir.</p>
+      <input id="tokenInput" type="password" autocomplete="off" spellcheck="false" placeholder="Token" required>
+      <label class="switch-row">
+        <span>Bu cihazda hatırla</span>
+        <input type="checkbox" id="remember" class="switch">
+      </label>
+      <p class="hint small">Kapalıysa sekme kapanınca token silinir.</p>
+      <p id="loginNote" class="note"></p>
+      <button class="primary" type="submit">Giriş</button>
+    </div>
   </form>
 </div>
 
