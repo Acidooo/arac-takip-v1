@@ -14,10 +14,17 @@ let lastMoveTs = null;  // son "seyirde" mesajı (null: bilinmiyor, 0: son 2 gü
 const map = L.map("map", { zoomControl: false }).setView([39.0, 35.0], 6);
 const ESRI = "https://server.arcgisonline.com/ArcGIS/rest/services/";
 const esri = (name, opts) => L.tileLayer(ESRI + name + "/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19, ...opts });
+const OSM_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+const dark = matchMedia("(prefers-color-scheme: dark)");
+// CARTO: açık temada Positron, koyu temada Dark Matter
+const cartoUrl = () => "https://{s}.basemaps.cartocdn.com/" + (dark.matches ? "dark_all" : "light_all") + "/{z}/{x}/{y}{r}.png";
+const carto = L.tileLayer(cartoUrl(), {
+  maxZoom: 20, subdomains: "abcd", attribution: OSM_ATTR + ' &copy; <a href="https://carto.com/attributions">CARTO</a>'
+});
+dark.addEventListener("change", () => carto.setUrl(cartoUrl()));
 const baseLayers = {
-  "Sokak": L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-  }),
+  "OSM": L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: OSM_ATTR }),
+  "CARTO": carto,
   "Hibrit": L.layerGroup([
     esri("World_Imagery", { attribution: "Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community" }),
     esri("Reference/World_Transportation"),
@@ -25,8 +32,11 @@ const baseLayers = {
   ]),
 };
 const LAYER_KEY = "mapLayer";
-let layerName = "Sokak";
-try { layerName = baseLayers[localStorage.getItem(LAYER_KEY)] ? localStorage.getItem(LAYER_KEY) : "Sokak"; } catch {}
+let layerName = "OSM";
+try {
+  const saved = localStorage.getItem(LAYER_KEY) === "Sokak" ? "OSM" : localStorage.getItem(LAYER_KEY);  // eski ad
+  if (baseLayers[saved]) layerName = saved;
+} catch {}
 function setLayer(name) {
   if (!baseLayers[name]) return;
   if (map.hasLayer(baseLayers[layerName])) map.removeLayer(baseLayers[layerName]);
