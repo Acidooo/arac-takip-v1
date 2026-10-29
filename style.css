@@ -148,3 +148,30 @@ button.primary:active { filter: brightness(.9); }
   #dock { bottom: max(10px, env(safe-area-inset-bottom)); }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* ---------- Durum satırı ---------- */
+.state { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-top: -4px; }
+.state i { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+.state.drive i { background: var(--ok); } .state.idle i { background: var(--warn); } .state.park i { background: var(--accent); }
+
+/* ---------- Yolculuklar ---------- */
+.window[data-win="trips"] { right: 16px; top: 190px; width: 300px; }
+.daterow { display: flex; gap: 6px; }
+#day { flex: 1; min-width: 0; height: 34px; padding: 0 10px; border-radius: 10px; border: 0; background: var(--fill); }
+.triplist { display: grid; gap: 6px; max-height: min(38vh, 320px); overflow-y: auto; margin: 0 -4px; padding: 0 4px; }
+.triplist:empty { display: none; }
+.triplist p { margin: 0; color: var(--muted); font-size: 13px; }
+.trip { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; text-align: left; border: 0; border-radius: 12px;
+  padding: 8px 10px; background: var(--fill); transition: background .15s; }
+.trip:hover { background: var(--fill-on); }
+.trip.on { background: var(--accent); color: #fff; }
+.trip b { font-variant-numeric: tabular-nums; }
+.trip span { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.trip.on span { color: rgba(255,255,255,.8); }
+.trip .r { text-align: right; }
+.player { display: grid; gap: 8px; }
+.player[hidden] { display: none; }
+#scrub { flex: 1; accent-color: var(--accent); }
+.playinfo { display: flex; justify-content: space-between; font-variant-numeric: tabular-nums; }
+.playinfo span { color: var(--muted); }
+.ghost { width: 16px; height: 16px; border-radius: 50%; background: #ff9f0a; border: 3px solid #fff; box-shadow: 0 2px 8px rgba(0,0,0,.4); }

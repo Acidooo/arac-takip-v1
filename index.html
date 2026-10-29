@@ -34,6 +34,7 @@
         <div class="speed"><b id="speed">–</b><span>km/sa</span></div>
         <div class="heading" title="Yön"><svg viewBox="0 0 24 24" id="compass"><path d="M12 2l6 18-6-4-6 4z"/></svg></div>
       </div>
+      <div class="state" id="state"><i></i><span id="stateText">–</span></div>
       <div class="tiles">
         <div class="tile"><span>Son konum</span><b id="ago">–</b></div>
         <div class="tile"><span>Rota noktası</span><b id="count">–</b></div>
@@ -77,6 +78,42 @@
     </div>
   </section>
 
+  <section class="window" data-win="trips" aria-label="Yolculuklar">
+    <header class="titlebar">
+      <div class="lights">
+        <button class="light close" data-act="close" type="button" aria-label="Kapat"></button>
+        <button class="light min" data-act="min" type="button" aria-label="Küçült"></button>
+        <span class="light zoom" aria-hidden="true"></span>
+      </div>
+      <span class="wtitle">Yolculuklar</span>
+    </header>
+    <div class="wbody">
+      <div class="daterow">
+        <button type="button" class="glassbtn" id="dayPrev" aria-label="Önceki gün">‹</button>
+        <input type="date" id="day" aria-label="Gün">
+        <button type="button" class="glassbtn" id="dayNext" aria-label="Sonraki gün">›</button>
+      </div>
+      <div class="tiles">
+        <div class="tile"><span>Yolculuk</span><b id="tripCount">–</b></div>
+        <div class="tile"><span>Toplam</span><b id="tripKm">–</b></div>
+      </div>
+      <div id="tripList" class="triplist" aria-live="polite"></div>
+      <div id="player" class="player" hidden>
+        <div class="btnrow">
+          <button type="button" class="glassbtn" id="play" aria-label="Oynat">▶</button>
+          <input type="range" id="scrub" min="0" max="1000" value="0" aria-label="Zaman">
+        </div>
+        <div class="playinfo"><b id="playTime">–</b><span id="playSpeed">–</span></div>
+        <div class="seg" id="rate" role="radiogroup" aria-label="Oynatma hızı">
+          <button type="button" data-v="30" role="radio">30×</button>
+          <button type="button" data-v="120" role="radio" class="on">120×</button>
+          <button type="button" data-v="600" role="radio">600×</button>
+        </div>
+        <button type="button" class="glassbtn wide" id="backLive">Canlıya dön</button>
+      </div>
+    </div>
+  </section>
+
 </div>
 
 <nav id="dock" aria-label="Dock">
@@ -85,6 +122,9 @@
   </button>
   <button type="button" class="dock-item" data-toggle="layers" title="Harita">
     <svg viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5zm-7.3 8.4L12 15.5l7.3-4.1L21 12.4l-9 5-9-5zm0 4L12 19.5l7.3-4.1 1.7 1-9 5-9-5z"/></svg>
+  </button>
+  <button type="button" class="dock-item" data-toggle="trips" title="Yolculuklar">
+    <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20zm0 2a8 8 0 1 0 0 16 8 8 0 0 0 0-16zm1 3v4.6l3.5 2.1-1 1.7L11 12.7V7z"/></svg>
   </button>
   <span class="dock-sep"></span>
   <button type="button" class="dock-item" id="recenter" title="Aracı ortala">
