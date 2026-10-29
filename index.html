@@ -3,12 +3,19 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: https://tile.openstreetmap.org https://server.arcgisonline.com https://*.basemaps.cartocdn.com; connect-src https://flespi.io wss://mqtt.flespi.io; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: https://tile.openstreetmap.org https://server.arcgisonline.com https://*.basemaps.cartocdn.com; connect-src https://flespi.io wss://mqtt.flespi.io; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin">
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <title>Araç Takip</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Araç Takip">
 <link rel="stylesheet" href="vendor/leaflet.css">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -37,7 +44,7 @@
       <div class="state" id="state"><i></i><span id="stateText">–</span></div>
       <div class="tiles">
         <div class="tile"><span>Son konum</span><b id="ago">–</b></div>
-        <div class="tile"><span>Rota noktası</span><b id="count">–</b></div>
+        <div class="tile" id="battTile" title="Araç aküsü (cihazın beslendiği voltaj)"><span>Akü</span><b id="batt">–</b></div>
       </div>
       <div class="group">
         <span class="glabel">Rota</span>
@@ -145,6 +152,37 @@
     </div>
   </section>
 
+  <section class="window" data-win="report" aria-label="Rapor">
+    <header class="titlebar">
+      <div class="lights">
+        <button class="light close" data-act="close" type="button" aria-label="Kapat"></button>
+        <button class="light min" data-act="min" type="button" aria-label="Küçült"></button>
+        <span class="light zoom" aria-hidden="true"></span>
+      </div>
+      <span class="wtitle">Rapor</span>
+    </header>
+    <div class="wbody">
+      <div class="seg" id="repDays" role="radiogroup" aria-label="Rapor süresi">
+        <button type="button" data-v="7" role="radio" class="on">7 gün</button>
+        <button type="button" data-v="30" role="radio">30 gün</button>
+      </div>
+      <div class="tiles three">
+        <div class="tile"><span>Toplam</span><b id="repKm">–</b></div>
+        <div class="tile"><span>Sürüş</span><b id="repTime">–</b></div>
+        <div class="tile"><span>Yolculuk</span><b id="repTrips">–</b></div>
+      </div>
+      <div class="group">
+        <span class="glabel">Günlük km</span>
+        <div id="repChart" class="bars" role="img" aria-label="Günlük km grafiği"></div>
+      </div>
+      <div class="tiles">
+        <div class="tile"><span>Günlük ort.</span><b id="repAvg">–</b></div>
+        <div class="tile"><span>Maks hız</span><b id="repMax">–</b></div>
+      </div>
+      <p class="hint small" id="repNote"></p>
+    </div>
+  </section>
+
 </div>
 
 <nav id="dock" aria-label="Dock">
@@ -159,6 +197,9 @@
   </button>
   <button type="button" class="dock-item" data-toggle="zones" title="Bölgeler">
     <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20zm0 2a8 8 0 1 0 0 16 8 8 0 0 0 0-16zm0 3a4 4 0 0 1 4 4c0 3-4 7-4 7s-4-4-4-7a4 4 0 0 1 4-4zm0 2.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z"/></svg>
+  </button>
+  <button type="button" class="dock-item" data-toggle="report" title="Rapor">
+    <svg viewBox="0 0 24 24"><path d="M4 20V10h3v10zm6.5 0V4h3v16zM17 20v-7h3v7z"/></svg>
   </button>
   <span class="dock-sep"></span>
   <button type="button" class="dock-item" id="recenter" title="Aracı ortala">

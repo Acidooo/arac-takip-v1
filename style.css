@@ -193,3 +193,18 @@ button.primary:active { filter: brightness(.9); }
 .zonelog b { width: 42px; flex: none; }
 .zonelog .in { color: var(--ok); } .zonelog .out { color: var(--warn); }
 .leaflet-container.picking { cursor: crosshair; }
+
+/* ---------- Akü ---------- */
+#battTile.low b { color: var(--bad); }
+
+/* ---------- Rapor ---------- */
+.window[data-win="report"] { left: 336px; top: 16px; width: 320px; }
+.tiles.three { grid-template-columns: 1fr 1fr 1fr; }
+.bars { display: flex; align-items: flex-end; gap: 3px; height: 110px; padding-top: 14px; }
+.bars .bar { flex: 1; min-width: 0; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 3px; }
+.bars .fill { width: 100%; min-height: 2px; border-radius: 4px 4px 2px 2px; background: var(--accent); opacity: .85; }
+.bars .bar.zero .fill { background: var(--fill); opacity: 1; }
+.bars .bar.today .fill { opacity: 1; }
+.bars small { font-size: 9px; color: var(--muted); font-variant-numeric: tabular-nums; line-height: 1; }
+.bars .bar:hover .fill { opacity: 1; filter: brightness(1.1); }
+.tiles.three b { font-size: 13px; white-space: nowrap; }

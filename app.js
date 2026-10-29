@@ -1,7 +1,7 @@
 const DEVICE_ID = 9363738;
 const API = "https://flespi.io";
 const MQTT_URL = "wss://mqtt.flespi.io:443";
-const FIELDS = "timestamp,position.latitude,position.longitude,position.speed,position.direction,engine.ignition.status";
+const FIELDS = "timestamp,position.latitude,position.longitude,position.speed,position.direction,engine.ignition.status,external.powersource.voltage";
 const TOKEN_KEY = "flespiToken";
 
 const $ = (id) => document.getElementById(id);
@@ -81,7 +81,7 @@ function toPoint(m) {
   if (typeof lat !== "number" || typeof lon !== "number" || Math.abs(lat) > 90 || Math.abs(lon) > 180) return null;
   const ign = m["engine.ignition.status"];
   return { t: m.timestamp, lat, lon, speed: m["position.speed"] ?? null, dir: m["position.direction"] ?? null,
-    ign: typeof ign === "boolean" ? ign : null };
+    ign: typeof ign === "boolean" ? ign : null, volt: m["external.powersource.voltage"] ?? null };
 }
 
 async function api(path, data) {
@@ -144,7 +144,6 @@ function dur(s) {
 
 function drawRoute() {
   route.setLatLngs(points.length > 1 ? points.map(p => [p.lat, p.lon]) : []);
-  $("count").textContent = points.length || "–";
 }
 
 function update(p) {
@@ -160,6 +159,11 @@ function update(p) {
     if (icon) icon.style.transform = rot;
   }
   if (isDriving(p)) lastMoveTs = Math.max(lastMoveTs || 0, p.t);
+  if (typeof p.volt === "number") {
+    // Kontak kapalıyken 12,0 V altı: akü zayıflıyor olabilir
+    $("batt").textContent = p.volt.toLocaleString("tr-TR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + " V";
+    $("battTile").classList.toggle("low", p.volt < 12 && !isDriving(p));
+  }
   renderAgo();
   renderState();
   if (zones.length) renderZones();
@@ -206,6 +210,7 @@ async function start() {
     await loadHistory();
     loadLastMove().catch(() => {});
     loadDay();
+    loadReport();
     status("wait", "Canlı bağlantı kuruluyor…");
     connectLive();
   } catch (e) {
@@ -520,6 +525,59 @@ $("zoneList").addEventListener("click", (e) => {
 });
 renderZones();
 
+// ---------- Rapor ----------
+// Son 7/30 günün mesajları gün gün yolculuklara bölünür; km, sürüş süresi ve maks hız sayfada hesaplanır.
+async function loadReport() {
+  const days = +segValue("repDays");
+  const start = new Date(); start.setHours(0, 0, 0, 0); start.setDate(start.getDate() - days + 1);
+  $("repNote").textContent = "Yükleniyor…";
+  let pts;
+  try {
+    const msgs = await api(`/gw/devices/${DEVICE_ID}/messages`,
+      { from: Math.floor(start / 1000), to: Math.floor(Date.now() / 1000), fields: FIELDS, filter: "position.latitude" });
+    pts = msgs.map(toPoint).filter(Boolean);
+  } catch (e) { $("repNote").textContent = "Veri alınamadı: " + e.message; return; }
+  const byDay = new Map();
+  for (let i = 0; i < days; i++) { const d = new Date(start); d.setDate(d.getDate() + i); byDay.set(ymd(d), []); }
+  for (const p of pts) byDay.get(ymd(new Date(p.t * 1000)))?.push(p);
+  let totalM = 0, secs = 0, n = 0, vmax = 0;
+  const rows = [...byDay].map(([day, dp]) => {
+    const tr = splitTrips(dp), m = tr.reduce((a, t) => a + t.dist, 0);
+    totalM += m; n += tr.length;
+    for (const t of tr) { secs += t.t1 - t.t0; vmax = Math.max(vmax, t.vmax); }
+    return { day, m, trips: tr.length };
+  });
+  $("repKm").textContent = Math.round(totalM / 1000) + " km";
+  $("repTime").textContent = dur(secs);
+  $("repTrips").textContent = n;
+  $("repAvg").textContent = (totalM / 1000 / days).toLocaleString("tr-TR", { maximumFractionDigits: 1 }) + " km";
+  $("repMax").textContent = vmax ? Math.round(vmax) + " km/sa" : "–";
+  const chart = $("repChart"); chart.innerHTML = "";
+  const top = Math.max(1, ...rows.map(r => r.m)), today = ymd(new Date());
+  for (const r of rows) {
+    const d = new Date(r.day + "T12:00:00");
+    const bar = document.createElement("div");
+    bar.className = "bar" + (r.m ? "" : " zero") + (r.day === today ? " today" : "");
+    bar.title = d.toLocaleDateString("tr-TR", { weekday: "short", day: "numeric", month: "short" }) +
+      ": " + km(r.m) + ", " + r.trips + " yolculuk";
+    const fill = document.createElement("div"); fill.className = "fill";
+    fill.style.height = Math.round(r.m / top * 100) + "%";  // CSSOM: CSP'ye takılmaz
+    const lab = document.createElement("small");
+    lab.textContent = days <= 7 ? d.toLocaleDateString("tr-TR", { weekday: "short" }) : (d.getDate() % 5 === 1 ? d.getDate() : "");
+    bar.append(fill, lab); chart.append(bar);
+  }
+  const first = pts.length ? new Date(pts[0].t * 1000) : null;
+  $("repNote").textContent = first && first > new Date(start.getTime() + 86400000)
+    ? "flespi'de " + first.toLocaleDateString("tr-TR") + " öncesine ait veri yok." : "";
+}
+$("repDays").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b || b.classList.contains("on")) return;
+  setSeg("repDays", b.dataset.v); if (token) loadReport();
+});
+
+// Ana ekrana eklenebilir uygulama: kabuk dosyaları önbelleğe alınır, flespi verisi asla önbelleğe girmez
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+
 // ---------- Pencere yöneticisi ----------
 // Her .window[data-win]: başlıktan sürüklenir, sarı düğme küçültür, kırmızı kapatır, Dock geri açar.
 // Konum/durum bu tarayıcıda hatırlanır (sadece arayüz tercihi, hassas veri yok).
@@ -554,7 +612,8 @@ for (const w of wins) {
   const id = w.dataset.win, st = winState[id] || {};
   if (st.x != null && !narrow.matches) { w.style.left = st.x + "px"; w.style.top = st.y + "px"; w.style.right = "auto"; clamp(w); }
   if (st.min) w.classList.add("min");
-  const closed = st.closed ?? (narrow.matches && id !== "vehicle");
+  // İlk açılışta sadece Araç (masaüstünde Harita da) açık; diğerleri Dock'tan açılır
+  const closed = st.closed ?? (narrow.matches ? id !== "vehicle" : !["vehicle", "layers"].includes(id));
   w.classList.toggle("closed", closed);
   document.querySelector(`.dock-item[data-toggle="${id}"]`)?.classList.toggle("open", !closed);
 
