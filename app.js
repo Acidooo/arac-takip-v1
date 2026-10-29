@@ -1,7 +1,7 @@
 const DEVICE_ID = 9363738;
 const API = "https://flespi.io";
 const MQTT_URL = "wss://mqtt.flespi.io:443";
-const FIELDS = "timestamp,position.latitude,position.longitude,position.speed,position.direction";
+const FIELDS = "timestamp,position.latitude,position.longitude,position.speed,position.direction,engine.ignition.status";
 const TOKEN_KEY = "flespiToken";
 
 const $ = (id) => document.getElementById(id);
@@ -9,6 +9,7 @@ let token = load();
 let mqttClient = null;
 let points = [];   // [{t, lat, lon, speed}]
 let lastTs = 0;
+let lastMoveTs = null;  // son "seyirde" mesajı (null: bilinmiyor, 0: son 2 günde yok); park süresi buradan hesaplanır
 
 const map = L.map("map", { zoomControl: false }).setView([39.0, 35.0], 6);
 const ESRI = "https://server.arcgisonline.com/ArcGIS/rest/services/";
@@ -68,7 +69,9 @@ const segValue = (id) => $(id).querySelector("button.on").dataset.v;
 function toPoint(m) {
   const lat = m["position.latitude"], lon = m["position.longitude"];
   if (typeof lat !== "number" || typeof lon !== "number" || Math.abs(lat) > 90 || Math.abs(lon) > 180) return null;
-  return { t: m.timestamp, lat, lon, speed: m["position.speed"] ?? null, dir: m["position.direction"] ?? null };
+  const ign = m["engine.ignition.status"];
+  return { t: m.timestamp, lat, lon, speed: m["position.speed"] ?? null, dir: m["position.direction"] ?? null,
+    ign: typeof ign === "boolean" ? ign : null };
 }
 
 async function api(path, data) {
@@ -97,6 +100,38 @@ async function loadHistory() {
   else status("wait", "Son 7 günde konum bulunamadı.");
 }
 
+// Kontak bilgisi varsa onu, yoksa hızı esas al
+const isDriving = (p) => p.ign === true || (p.ign == null && (p.speed || 0) > 3);
+
+// Park süresi için son seyir anını bul (son 2 gün, en yeniden geriye)
+async function loadLastMove() {
+  const now = Math.floor(Date.now() / 1000);
+  const msgs = await api(`/gw/devices/${DEVICE_ID}/messages`,
+    { from: now - 2 * 86400, to: now, fields: FIELDS, filter: "position.latitude", reverse: true, count: 2000 });
+  const moving = msgs.map(toPoint).filter(Boolean).filter(isDriving);
+  lastMoveTs = moving.length ? Math.max(...moving.map(p => p.t)) : 0;
+  renderState();
+}
+
+function renderState() {
+  const p = points[points.length - 1];
+  const el = $("state");
+  if (!p) { el.className = "state"; $("stateText").textContent = "–"; return; }
+  if (isDriving(p) && (p.speed || 0) > 3) { el.className = "state drive"; $("stateText").textContent = "Seyirde"; }
+  else if (p.ign === true) { el.className = "state idle"; $("stateText").textContent = "Kontak açık, duruyor"; }
+  else {
+    el.className = "state park";
+    $("stateText").textContent = lastMoveTs ? "Park halinde · " + dur(Date.now() / 1000 - lastMoveTs)
+      : lastMoveTs === 0 ? "Park halinde · 2 günden uzun" : "Park halinde";
+  }
+}
+
+function dur(s) {
+  s = Math.max(0, Math.floor(s));
+  const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60);
+  return d ? `${d} gün ${h} sa` : h ? `${h} sa ${m} dk` : `${m} dk`;
+}
+
 function drawRoute() {
   route.setLatLngs(points.length > 1 ? points.map(p => [p.lat, p.lon]) : []);
   $("count").textContent = points.length || "–";
@@ -114,7 +149,10 @@ function update(p) {
     const icon = marker.getElement() && marker.getElement().querySelector("svg");
     if (icon) icon.style.transform = rot;
   }
+  if (isDriving(p)) lastMoveTs = Math.max(lastMoveTs || 0, p.t);
   renderAgo();
+  renderState();
+  if (replay) return;  // geçmiş oynatılırken harita canlı konuma kaymasın
   if (!fitted) { map.setView([p.lat, p.lon], 15); fitted = true; }
   else if ($("follow").checked) map.panTo([p.lat, p.lon]);
 }
@@ -126,7 +164,7 @@ function renderAgo() {
     : s < 86400 ? Math.floor(s / 3600) + " sa önce" : Math.floor(s / 86400) + " gün önce";
   $("ago").title = new Date(lastTs * 1000).toLocaleString("tr-TR");
 }
-setInterval(renderAgo, 15000);
+setInterval(() => { renderAgo(); renderState(); }, 15000);
 
 function connectLive() {
   if (mqttClient) mqttClient.end(true);
@@ -154,6 +192,8 @@ async function start() {
   status("wait", "Yükleniyor…");
   try {
     await loadHistory();
+    loadLastMove().catch(() => {});
+    loadDay();
     status("wait", "Canlı bağlantı kuruluyor…");
     connectLive();
   } catch (e) {
@@ -194,6 +234,163 @@ $("fitRoute").addEventListener("click", () => {
 });
 $("recenter").addEventListener("click", () => {
   if (points.length) { const p = points[points.length - 1]; map.setView([p.lat, p.lon], Math.max(map.getZoom(), 15)); }
+});
+
+// ---------- Yolculuklar ----------
+// Seçilen günün mesajları çekilir, sayfada yolculuklara bölünür (sunucu veya flespi hesaplayıcısı gerekmez).
+// Yolculuk: kontak açık (yoksa hız > 3 km/sa) olan kesintisiz dönem; 3 dk'dan kısa duruşlar aynı yolculuk sayılır.
+const STOP_GAP = 180, MIN_TRIP_M = 300;
+const tripLayer = L.polyline([], { color: "#ff9f0a", weight: 5, opacity: .9, lineCap: "round", lineJoin: "round" });
+const ghost = L.marker([0, 0], { icon: L.divIcon({ className: "", html: '<div class="ghost"></div>', iconSize: [16, 16] }) });
+let trips = [], replay = null;  // replay: {trip, t, playing}
+
+const pad = (n) => String(n).padStart(2, "0");
+const ymd = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const hm = (t) => { const d = new Date(t * 1000); return pad(d.getHours()) + ":" + pad(d.getMinutes()); };
+const km = (m) => (m / 1000).toLocaleString("tr-TR", { maximumFractionDigits: 1 }) + " km";
+
+function haversine(a, b) {
+  const R = 6371000, rad = Math.PI / 180;
+  const dLat = (b.lat - a.lat) * rad, dLon = (b.lon - a.lon) * rad;
+  const x = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(x));
+}
+
+function splitTrips(pts) {
+  const out = [];
+  let cur = null, lastActive = 0;
+  for (const p of pts) {
+    const active = isDriving(p);
+    if (cur && (p.t - lastActive > STOP_GAP) ) { out.push(cur); cur = null; }
+    if (active) {
+      if (!cur) cur = { pts: [] };
+      lastActive = p.t;
+    }
+    if (cur) cur.pts.push(p);
+  }
+  if (cur) out.push(cur);
+  return out.map(tr => {
+    // Sondaki park noktalarını at, mesafe ve süreyi hesapla
+    let end = tr.pts.length - 1;
+    while (end > 0 && !isDriving(tr.pts[end])) end--;
+    const ps = tr.pts.slice(0, end + 1);
+    let dist = 0, vmax = 0;
+    for (let i = 1; i < ps.length; i++) {
+      const d = haversine(ps[i - 1], ps[i]);
+      if (d < 5000) dist += d;  // GPS sıçramalarını sayma
+      vmax = Math.max(vmax, ps[i].speed || 0);
+    }
+    return { pts: ps, t0: ps[0].t, t1: ps[ps.length - 1].t, dist, vmax };
+  }).filter(tr => tr.dist >= MIN_TRIP_M && tr.pts.length > 1);
+}
+
+async function loadDay() {
+  const d = new Date($("day").value + "T00:00:00");
+  if (isNaN(d)) return;
+  const from = Math.floor(d / 1000), to = from + 86400 - 1;
+  $("dayNext").disabled = ymd(d) >= ymd(new Date());
+  $("tripList").innerHTML = "<p>Yükleniyor…</p>";
+  stopReplay();
+  try {
+    const msgs = await api(`/gw/devices/${DEVICE_ID}/messages`, { from, to, fields: FIELDS, filter: "position.latitude" });
+    trips = splitTrips(msgs.map(toPoint).filter(Boolean));
+  } catch (e) {
+    trips = [];
+    $("tripList").innerHTML = "";
+    const p = document.createElement("p"); p.textContent = e.message === "auth" ? "Token yetkisiz." : "Veri alınamadı: " + e.message;
+    $("tripList").append(p);
+    return;
+  }
+  $("tripCount").textContent = trips.length;
+  $("tripKm").textContent = km(trips.reduce((a, t) => a + t.dist, 0));
+  const list = $("tripList"); list.innerHTML = "";
+  if (!trips.length) { list.innerHTML = "<p>Bu gün için yolculuk yok.</p>"; return; }
+  trips.forEach((tr, i) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "trip"; b.dataset.i = i;
+    b.innerHTML = `<b>${hm(tr.t0)} – ${hm(tr.t1)}</b><b class="r">${km(tr.dist)}</b>` +
+      `<span>${dur(tr.t1 - tr.t0)}</span><span class="r">maks ${Math.round(tr.vmax)} km/sa</span>`;
+    list.append(b);
+  });
+}
+
+function selectTrip(i) {
+  const tr = trips[i]; if (!tr) return;
+  for (const b of $("tripList").children) b.classList.toggle("on", b.dataset.i === String(i));
+  $("follow").checked = false;
+  route.setStyle({ opacity: .25 });
+  tripLayer.setLatLngs(tr.pts.map(p => [p.lat, p.lon])).addTo(map);
+  // Telefonda pencere haritanın üstünü kapatır; rotayı altta kalan alana sığdır
+  const top = narrow.matches ? document.querySelector('.window[data-win="trips"]').getBoundingClientRect().bottom + 20 : 60;
+  map.fitBounds(tripLayer.getBounds(), { paddingTopLeft: [40, top], paddingBottomRight: [40, 90] });
+  replay = { trip: tr, t: tr.t0, playing: false };
+  ghost.addTo(map);
+  $("player").hidden = false;
+  renderReplay();
+}
+
+// t anındaki konumu iki nokta arasında doğrusal hesapla
+function posAt(tr, t) {
+  const ps = tr.pts;
+  let i = 1; while (i < ps.length - 1 && ps[i].t < t) i++;
+  const a = ps[i - 1], b = ps[i], f = b.t > a.t ? Math.min(1, Math.max(0, (t - a.t) / (b.t - a.t))) : 1;
+  return { lat: a.lat + (b.lat - a.lat) * f, lon: a.lon + (b.lon - a.lon) * f, speed: f < .5 ? a.speed : b.speed };
+}
+
+function renderReplay() {
+  const { trip: tr, t } = replay, p = posAt(tr, t);
+  ghost.setLatLng([p.lat, p.lon]);
+  $("scrub").value = Math.round((t - tr.t0) / Math.max(1, tr.t1 - tr.t0) * 1000);
+  const d = new Date(t * 1000);
+  $("playTime").textContent = d.toLocaleTimeString("tr-TR");
+  $("playSpeed").textContent = p.speed == null ? "–" : Math.round(p.speed) + " km/sa";
+  $("play").textContent = replay.playing ? "❚❚" : "▶";
+  $("play").setAttribute("aria-label", replay.playing ? "Duraklat" : "Oynat");
+}
+
+let lastFrame = 0;
+function tick(now) {
+  if (!replay || !replay.playing) return;
+  const dt = lastFrame ? (now - lastFrame) / 1000 : 0; lastFrame = now;
+  replay.t = Math.min(replay.trip.t1, replay.t + dt * +segValue("rate"));
+  if (replay.t >= replay.trip.t1) replay.playing = false;
+  renderReplay();
+  if (!map.getBounds().pad(-.1).contains(ghost.getLatLng())) map.panTo(ghost.getLatLng());
+  if (replay.playing) requestAnimationFrame(tick);
+}
+
+function stopReplay() {
+  replay = null;
+  tripLayer.remove(); ghost.remove();
+  route.setStyle({ opacity: .85 });
+  $("player").hidden = true;
+  for (const b of $("tripList").querySelectorAll(".trip")) b.classList.remove("on");
+}
+
+$("day").value = ymd(new Date());
+$("day").max = ymd(new Date());
+$("day").addEventListener("change", () => { if (token) loadDay(); });
+const shiftDay = (n) => { const d = new Date($("day").value + "T12:00:00"); d.setDate(d.getDate() + n); $("day").value = ymd(d); loadDay(); };
+$("dayPrev").addEventListener("click", () => shiftDay(-1));
+$("dayNext").addEventListener("click", () => shiftDay(1));
+$("tripList").addEventListener("click", (e) => { const b = e.target.closest(".trip"); if (b) selectTrip(+b.dataset.i); });
+$("play").addEventListener("click", () => {
+  if (!replay) return;
+  if (!replay.playing && replay.t >= replay.trip.t1) replay.t = replay.trip.t0;
+  replay.playing = !replay.playing; lastFrame = 0;
+  renderReplay();
+  if (replay.playing) requestAnimationFrame(tick);
+});
+$("scrub").addEventListener("input", () => {
+  if (!replay) return;
+  replay.t = replay.trip.t0 + (replay.trip.t1 - replay.trip.t0) * $("scrub").value / 1000;
+  renderReplay();
+});
+$("rate").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) setSeg("rate", b.dataset.v); });
+$("backLive").addEventListener("click", () => {
+  stopReplay();
+  $("follow").checked = true;
+  $("recenter").click();
 });
 
 // ---------- Pencere yöneticisi ----------

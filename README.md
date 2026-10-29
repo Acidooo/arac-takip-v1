@@ -7,12 +7,14 @@ Teltonika FMB120 için canlı harita. Veriyi flespi alır; bu statik sayfa GitHu
 - Açılışta son 1/6/24 saatin rotası flespi REST API'den çekilir.
 - Yeni konumlar flespi MQTT (WebSocket) üzerinden anlık gelir.
 - Harita: Sokak (OpenStreetMap) veya Hibrit (Esri uydu + yol/yer etiketleri).
+- Araç penceresinde durum: Seyirde / Kontak açık, duruyor / Park halinde ve park süresi (kontak bilgisi `engine.ignition.status`, yoksa hız).
+- Yolculuklar penceresi: gün seçilir, o günün mesajları sayfada yolculuklara bölünür (saat, süre, km, maks hız). Bir yolculuk seçilince rota turuncu çizilir ve zaman çubuğuyla 30×/120×/600× hızda oynatılır. Adres çözümleme yok; konum üçüncü bir servise gönderilmez.
 
 ## Arayüz
 
 - Apple tarzı cam (buzlu cam, blur) pencereler: macOS gibi başlık çubuğu, kırmızı = kapat, sarı = küçült (ya da başlığa çift tıkla).
 - Pencereler masaüstünde başlıktan sürüklenir; konumları bu tarayıcıda hatırlanır. Telefonda üstte tek pencere açık kalır.
-- Alttaki Dock: Araç ve Harita pencerelerini açar/kapatır, aracı ortalar, çıkış yapar.
+- Alttaki Dock: Araç, Harita ve Yolculuklar pencerelerini açar/kapatır, aracı ortalar, çıkış yapar.
 - Yeni panel eklemek: `index.html` içinde `#desktop` altına `<section class="window" data-win="ad">` ve Dock'a `data-toggle="ad"` düğmesi eklemek yeterli; pencere yöneticisi gerisini halleder.
 - Açık/koyu tema sistem ayarına göre otomatik.
 
