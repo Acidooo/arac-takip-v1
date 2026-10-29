@@ -6,7 +6,7 @@ Teltonika FMB120 için canlı harita. Veriyi flespi alır; bu statik sayfa GitHu
 
 - Açılışta son 1/6/24 saatin rotası flespi REST API'den çekilir.
 - Yeni konumlar flespi MQTT (WebSocket) üzerinden anlık gelir.
-- Harita: Sokak (OpenStreetMap) veya Hibrit (Esri uydu + yol/yer etiketleri).
+- Harita: OSM (OpenStreetMap standart), CARTO (açık temada Positron, koyu temada Dark Matter) veya Hibrit (Esri uydu + yol/yer etiketleri).
 
 ## Arayüz
 
