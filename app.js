@@ -782,9 +782,12 @@ function renderDevice() {
   const alerts = [];  // [seviye, metin]
 
   // --- Hat ---
-  const sig = num(dv("gsm.signal.level"));  // AVL 21, 0–5
+  // AVL 21 cihazda 0–5; flespi bunu yüzdeye çeviriyor (0–100). 5'ten büyükse yüzde say, 20'şerlik basamağa indir.
+  const sigRaw = num(dv("gsm.signal.level"));
+  const sig = sigRaw == null ? null : sigRaw > 5 ? Math.min(5, Math.round(sigRaw / 20)) : sigRaw;
   $("dvBars").className = "sigbars l" + (sig ?? 0);
   $("dvSig").textContent = sig == null ? "–" : SIG_TEXT[sig] ?? sig;
+  $("dvSigTile").title = sigRaw == null ? "" : sigRaw > 5 ? "%" + sigRaw : sigRaw + "/5";
   $("dvSigTile").classList.toggle("bad", sig != null && sig <= 1);
   $("dvSigTile").classList.toggle("warn", sig === 2);
   if (sig != null && sig <= 1) alerts.push(["warn", "GSM sinyali çok zayıf: veri gecikebilir, SMS geç ulaşabilir."]);
@@ -802,7 +805,7 @@ function renderDevice() {
   if (dm === 4 || dm === 5) $("dvNet").textContent = "Bilinmiyor";
   if (roaming) alerts.push(["warn", "SIM dolaşımda (yurt dışı ağ): veri ücreti yüksek olabilir."]);
 
-  const cell = dv("gsm.cellid"), lac = dv("gsm.lac");  // AVL 205, 206
+  const cell = dv("gsm.cellid", /cell\.?id/i), lac = dv("gsm.lac", /\.lac$|area\.code/i);  // AVL 205, 206
   $("dvCell").textContent = cell == null ? "–" : (lac != null ? lac + " / " : "") + cell;
   $("dvCell").title = "LAC (bölge kodu) / Cell ID";
 
@@ -851,7 +854,7 @@ function renderDevice() {
   $("dvLast").title = new Date(last * 1000).toLocaleString("tr-TR");
   const dts = num(dv("timestamp")), sts = num(dv("server.timestamp"));
   const lag = dts != null && sts != null ? sts - dts : null;
-  setTile("dvLag", lag == null ? "–" : lag < 5 ? "Yok" : lag < 3600 ? Math.round(lag / 60) + " dk" : dur(lag), lag == null ? "" : lag < 120 ? "good" : "warn");
+  setTile("dvLag", lag == null ? "–" : lag < 60 ? "Yok" : lag < 3600 ? Math.round(lag / 60) + " dk" : dur(lag), lag == null ? "" : lag < 120 ? "good" : "warn");
   $("dvLag").title = "Kaydın oluşması ile flespi'ye ulaşması arasındaki süre";
   if (lag != null && lag > 300) alerts.push(["warn", "Son kayıt " + dur(lag) + " gecikmeyle geldi: cihaz o sırada hatta bağlanamamış, kayıtları sonradan gönderdi."]);
   if (silent > 3 * 3600 && ign === true) alerts.push(["bad", "Kontak açık görünüyor ama " + dur(silent) + " veri yok: hat/kontör veya cihaz arızası olabilir."]);
@@ -859,7 +862,7 @@ function renderDevice() {
 
   let pill = "live", pillText = "Çevrimiçi";
   if (silent > 26 * 3600) { pill = "err"; pillText = "Sessiz"; }
-  else if (silent > 600) { pill = "wait"; pillText = sl > 0 || ign === false ? "Uykuda" : "Bekleniyor"; }
+  else if (silent > 600) { pill = "wait"; pillText = sl > 0 ? "Uykuda" : ign === false ? "Park" : "Bekleniyor"; }
   $("devPill").className = "pill " + pill; $("devPillText").textContent = pillText;
 
   // --- Uyarılar ---
