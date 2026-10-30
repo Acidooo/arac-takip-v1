@@ -5,6 +5,8 @@
   --fill: rgba(120,120,128,.14); --fill-on: rgba(255,255,255,.95);
   --shadow: 0 1px 0 rgba(255,255,255,.5) inset, 0 20px 50px -12px rgba(0,0,0,.35), 0 4px 14px rgba(0,0,0,.12);
   --accent: #0a84ff; --ok: #30d158; --warn: #ff9f0a; --bad: #ff453a;
+  /* Yazı için koyu tonlar: açık cam üstünde parlak yeşil/turuncu okunmuyor */
+  --ok-fg: #1a7f37; --warn-fg: #a34f00; --bad-fg: #c4161c;
   --r: 18px;
 }
 @media (prefers-color-scheme: dark) {
@@ -13,6 +15,7 @@
     --glass: rgba(30,30,32,.55); --glass-strong: rgba(36,36,38,.8);
     --stroke: rgba(255,255,255,.14); --hair: rgba(255,255,255,.08);
     --fill: rgba(120,120,128,.24); --fill-on: rgba(99,99,102,.9);
+    --ok-fg: #4ade80; --warn-fg: #ffb340; --bad-fg: #ff6961;
     --shadow: 0 1px 0 rgba(255,255,255,.08) inset, 0 20px 50px -12px rgba(0,0,0,.7), 0 4px 14px rgba(0,0,0,.35);
   }
 }
@@ -124,7 +127,7 @@ span.light.zoom, .modal .light { filter: saturate(.4); opacity: .55; }
 .ltitle { font-size: 20px; letter-spacing: -.02em; }
 .hint { color: var(--muted); font-size: 13px; margin: 0; }
 .hint.small { font-size: 11px; text-align: left; margin-top: -6px; }
-.note { color: var(--bad); font-size: 13px; margin: 0; min-height: 0; }
+.note { color: var(--bad-fg); font-size: 13px; margin: 0; min-height: 0; }
 .note:empty { display: none; }
 #tokenInput { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--hair); background: var(--fill); }
 .modal .switch-row { text-align: left; font-size: 13px; }
@@ -152,7 +155,7 @@ html .dock-item:hover { background: var(--tint); }
 html .dock-item:active { background: var(--tint-hover); }
 html .dock-item.open { background: var(--tint); }
 html .dock-item.open::after { background: var(--tint-text); opacity: 1; }
-html #logout { color: var(--bad); }
+html #logout { color: var(--bad-fg); }
 html #logout:hover { background: rgba(255,69,58,.14); }
 /* Liste satırları (yolculuk, bölge) */
 html .trip:not(.on):hover, html .zone:has(.zn:hover) { background: var(--tint); }
@@ -225,11 +228,11 @@ html .zone .del:hover, html .svc .del:hover { background: rgba(255,69,58,.14); c
 .zonelog p { margin: 0; color: var(--muted); }
 .zonelog div { display: flex; gap: 8px; }
 .zonelog b { width: 42px; flex: none; }
-.zonelog .in { color: var(--ok); } .zonelog .out { color: var(--warn); }
+.zonelog .in { color: var(--ok-fg); } .zonelog .out { color: var(--warn-fg); }
 .leaflet-container.picking { cursor: crosshair; }
 
 /* ---------- Akü ---------- */
-#battTile.low b { color: var(--bad); }
+#battTile.low b { color: var(--bad-fg); }
 
 /* ---------- Rapor ---------- */
 .window[data-win="report"] { left: 336px; top: 16px; width: 320px; }
@@ -263,7 +266,7 @@ html .zone .del:hover, html .svc .del:hover { background: rgba(255,69,58,.14); c
 .svc { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 2px 6px; border-radius: 12px; padding: 7px 6px 7px 10px; background: var(--fill); }
 .svc b { font-size: 14px; } .svc span { grid-column: 1; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 .svc.soon { box-shadow: inset 3px 0 0 var(--warn); } .svc.due { box-shadow: inset 3px 0 0 var(--bad); }
-.svc.due span.left { color: var(--bad); font-weight: 600; } .svc.soon span.left { color: var(--warn); font-weight: 600; }
+.svc.due span.left { color: var(--bad-fg); font-weight: 600; } .svc.soon span.left { color: var(--warn-fg); font-weight: 600; }
 .svc .done { grid-row: 1 / span 3; grid-column: 2; border: 0; border-radius: 8px; padding: 5px 9px; font-size: 12px; font-weight: 600; background: var(--fill-on); }
 .svc .del { grid-row: 1 / span 3; grid-column: 3; border: 0; background: none; width: 28px; height: 28px; border-radius: 8px; color: var(--muted); font-size: 16px; }
 .svc .del:hover { color: var(--bad); }
@@ -275,10 +278,10 @@ html .zone .del:hover, html .svc .del:hover { background: rgba(255,69,58,.14); c
 .limitrow { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); font-weight: 600; }
 .limitrow span:first-child { flex: 1; }
 #speedLimit { width: 76px; text-align: right; }
-.trip .over { grid-column: 1 / -1; color: var(--bad); font-weight: 600; }
+.trip .over { grid-column: 1 / -1; color: var(--bad-fg); font-weight: 600; }
 .trip.on .over { color: #fff; }
-.speed.over b { color: var(--bad); }
-#repOverTile.bad b { color: var(--bad); }
+.speed.over b { color: var(--bad-fg); }
+#repOverTile.bad b { color: var(--bad-fg); }
 
 /* ---------- Paylaş ---------- */
 .window[data-win="share"] { right: 16px; top: 190px; width: 310px; }
@@ -301,7 +304,7 @@ body.share #desktop, body.share #dock, body.share #login, body.share #pickBar { 
 .window[data-win="device"] .wbody { max-height: calc(100vh - 140px); overflow-y: auto; }
 .window[data-win="device"] .tile b { display: flex; align-items: center; gap: 6px; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .window[data-win="device"] .tile b em { font-style: normal; }
-.tile.good b { color: var(--ok); } .tile.warn b { color: var(--warn); } .tile.bad b { color: var(--bad); }
+.tile.good b { color: var(--ok-fg); } .tile.warn b { color: var(--warn-fg); } .tile.bad b { color: var(--bad-fg); }
 /* Sinyal çubukları: .l0–.l5 kaç çubuğun dolu olduğunu söyler */
 .sigbars { display: inline-flex; align-items: flex-end; gap: 2px; height: 14px; flex: none; }
 .sigbars i { width: 3px; border-radius: 1px; background: var(--fill); background: color-mix(in srgb, var(--fg) 18%, transparent); }
@@ -309,7 +312,7 @@ body.share #desktop, body.share #dock, body.share #login, body.share #pickBar { 
 .sigbars i:nth-child(4) { height: 80%; } .sigbars i:nth-child(5) { height: 100%; }
 .sigbars.l1 i:nth-child(-n+1), .sigbars.l2 i:nth-child(-n+2), .sigbars.l3 i:nth-child(-n+3),
 .sigbars.l4 i:nth-child(-n+4), .sigbars.l5 i:nth-child(-n+5) { background: currentColor; }
-#dvSigTile b { color: var(--ok); } #dvSigTile.warn b { color: var(--warn); } #dvSigTile.bad b { color: var(--bad); }
+#dvSigTile b { color: var(--ok-fg); } #dvSigTile.warn b { color: var(--warn-fg); } #dvSigTile.bad b { color: var(--bad-fg); }
 .alerts { display: grid; gap: 6px; }
 .alerts:empty { display: none; }
 .alert { margin: 0; padding: 7px 10px; border-radius: 10px; font-size: 12px; font-weight: 500; background: var(--fill); }
