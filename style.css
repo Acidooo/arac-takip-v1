@@ -164,9 +164,9 @@ html .zone .del:hover, html .svc .del:hover { background: rgba(255,69,58,.14); c
   background: var(--accent); border: 3px solid #fff; box-shadow: 0 0 0 6px rgba(10,132,255,.22), 0 4px 12px rgba(0,0,0,.35); }
 .car svg { width: 14px; height: 14px; color: #fff; transition: transform .6s; }
 .leaflet-container { background: var(--bg); font: inherit; }
-/* Atıf: Leaflet'in beyaz zeminini ezip (özgüllük için .leaflet-container) okunur cam hap.
-   Dock genişliği pencere sayısıyla değiştiği için her zaman Dock'un üstünde durur. */
-.leaflet-container .leaflet-control-attribution { margin: 0 10px calc(max(14px, env(safe-area-inset-bottom)) + 68px) 0; padding: 3px 8px; border-radius: 8px;
+/* Atıf: Leaflet'in beyaz zeminini ezip (özgüllük için .leaflet-container) okunur cam kutu, sağ alt köşeye yaslı.
+   Telefonda Dock alt kenarı kapladığı için onun üstüne çıkar. */
+.leaflet-container .leaflet-control-attribution { margin: 0; padding: 3px 8px; border-radius: 8px 0 0 0; border-width: 1px 0 0 1px;
   background: var(--glass-strong); color: var(--fg); font-size: 11px; line-height: 1.35; opacity: .9;
   max-width: min(360px, calc(100vw - 20px)); white-space: normal; text-align: right; }
 .leaflet-container .leaflet-control-attribution a { color: var(--tint-text, var(--accent)); text-decoration: none; }
@@ -179,7 +179,7 @@ html .zone .del:hover, html .svc .del:hover { background: rgba(255,69,58,.14); c
   .titlebar { cursor: default; }
   .speed b { font-size: 38px; }
   #dock { bottom: max(10px, env(safe-area-inset-bottom)); }
-  .leaflet-container .leaflet-control-attribution { margin-bottom: calc(max(10px, env(safe-area-inset-bottom)) + 66px); font-size: 10px; }
+  .leaflet-container .leaflet-control-attribution { margin-bottom: calc(max(10px, env(safe-area-inset-bottom)) + 66px); font-size: 10px; border-radius: 8px 0 0 8px; border-width: 1px 0 1px 1px; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 
