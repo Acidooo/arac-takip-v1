@@ -131,6 +131,34 @@ span.light.zoom, .modal .light { filter: saturate(.4); opacity: .55; }
 button.primary { border: 0; border-radius: 10px; padding: 10px; font-weight: 600; color: #fff; background: var(--accent); }
 button.primary:active { filter: brightness(.9); }
 
+/* ---------- Düğme rengi: tıklanabilir öğelere hafif mavi ton ---------- */
+:root { --tint: rgba(10,132,255,.10); --tint-hover: rgba(10,132,255,.18); --tint-press: rgba(10,132,255,.26); --tint-text: #0a6fd6; }
+@media (prefers-color-scheme: dark) {
+  :root { --tint: rgba(10,132,255,.18); --tint-hover: rgba(10,132,255,.28); --tint-press: rgba(10,132,255,.38); --tint-text: #64b5ff; }
+}
+/* Sonraki kurallardan önce gelse de geçerli olsun diye "html" ile özgüllük artırıldı */
+html .glassbtn, html .svc .done { background: var(--tint); color: var(--tint-text); transition: background .15s, transform .1s; }
+html .glassbtn:hover, html .svc .done:hover { background: var(--tint-hover); }
+html .glassbtn:active, html .svc .done:active { background: var(--tint-press); transform: scale(.96); }
+html .glassbtn:disabled { background: var(--fill); color: var(--muted); cursor: default; transform: none; }
+/* Segmented: seçili olan beyaz zemin + mavi yazı, diğerleri üstüne gelince tonlanır */
+html .seg button { color: var(--fg); }
+html .seg button:not(.on):hover { background: var(--tint); }
+html .seg button:not(.on):active { background: var(--tint-hover); }
+html .seg button.on { color: var(--tint-text); box-shadow: 0 1px 3px rgba(0,0,0,.15), inset 0 0 0 1px var(--tint-hover); }
+/* Dock: simgeler mavi, açık pencerenin simgesi tonlu zeminde */
+html .dock-item { color: var(--tint-text); }
+html .dock-item:hover { background: var(--tint); }
+html .dock-item:active { background: var(--tint-hover); }
+html .dock-item.open { background: var(--tint); }
+html .dock-item.open::after { background: var(--tint-text); opacity: 1; }
+html #logout { color: var(--bad); }
+html #logout:hover { background: rgba(255,69,58,.14); }
+/* Liste satırları (yolculuk, bölge) */
+html .trip:not(.on):hover, html .zone:has(.zn:hover) { background: var(--tint); }
+html .trip:not(.on):active { background: var(--tint-hover); }
+html .zone .del:hover, html .svc .del:hover { background: rgba(255,69,58,.14); color: var(--bad); }
+
 /* ---------- Harita öğeleri ---------- */
 .car { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
   background: var(--accent); border: 3px solid #fff; box-shadow: 0 0 0 6px rgba(10,132,255,.22), 0 4px 12px rgba(0,0,0,.35); }
