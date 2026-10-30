@@ -17,7 +17,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Araç Takip">
 <link rel="stylesheet" href="vendor/leaflet.css">
-<link rel="stylesheet" href="style.css?v=8">
+<link rel="stylesheet" href="style.css?v=9">
 </head>
 <body>
 <div id="map"></div>
@@ -246,10 +246,12 @@
       </form>
       <p class="note" id="shareNote"></p>
       <div id="shareOut" class="group" hidden>
+        <canvas id="shareQr" class="qr" width="232" height="232" aria-label="Paylaşım linki QR kodu"></canvas>
         <input id="shareLink" class="field" readonly aria-label="Paylaşım linki">
         <div class="btnrow">
           <button type="button" class="glassbtn wide" id="shareCopy">Kopyala</button>
           <button type="button" class="glassbtn wide" id="shareSend">Paylaş…</button>
+          <button type="button" class="glassbtn wide" id="shareSave">QR indir</button>
         </div>
         <p class="hint small">İptal etmek için token'ı flespi'den sil. Süresi dolunca link kendiliğinden çalışmaz.</p>
       </div>
@@ -329,7 +331,8 @@
 
 <script src="vendor/leaflet.js"></script>
 <script src="vendor/mqtt.min.js"></script>
+<script src="vendor/qrcode.js"></script>
 <!-- ?v=N: yeni sürümde N artırılır; tarayıcı eski app.js/style.css'i önbellekten vermesin -->
-<script src="app.js?v=8"></script>
+<script src="app.js?v=9"></script>
 </body>
 </html>

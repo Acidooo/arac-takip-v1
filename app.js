@@ -827,8 +827,22 @@ $("shareForm").addEventListener("submit", async (e) => {
   $("shareNote").textContent = "";
   $("shareToken").value = "";
   $("shareLink").value = location.origin + location.pathname + "#share=" + tok;
+  drawQr($("shareQr"), $("shareLink").value);
   $("shareOut").hidden = false;
   $("shareSend").hidden = !navigator.share;
+});
+// QR: vendor/qrcode.js (MIT) ile canvas'a çizilir; bağlantı dışarı gönderilmez
+function drawQr(cv, text) {
+  const qr = qrcode(0, "M"); qr.addData(text); qr.make();
+  const n = qr.getModuleCount(), q = 4, s = Math.floor(cv.width / (n + 2 * q)), off = Math.floor((cv.width - s * n) / 2);
+  const ctx = cv.getContext("2d");
+  ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, cv.width, cv.height);
+  ctx.fillStyle = "#000";
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (qr.isDark(r, c)) ctx.fillRect(off + c * s, off + r * s, s, s);
+}
+$("shareSave").addEventListener("click", () => {
+  const a = document.createElement("a");
+  a.href = $("shareQr").toDataURL("image/png"); a.download = "arac-konum-qr.png"; a.click();
 });
 $("shareCopy").addEventListener("click", async () => {
   try { await navigator.clipboard.writeText($("shareLink").value); $("shareCopy").textContent = "Kopyalandı"; }
