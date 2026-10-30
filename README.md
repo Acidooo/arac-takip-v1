@@ -14,7 +14,7 @@ Teltonika FMB120 için canlı harita. Veriyi flespi alır; bu statik sayfa GitHu
 - Akü kutusu: cihazın beslendiği araç aküsü voltajı (`external.powersource.voltage`). Kontak kapalıyken 12,0 V altı kırmızı görünür.
 - Rapor penceresi: son 7 veya 30 günün toplam km, sürüş süresi, yolculuk sayısı, günlük ortalama, maks hız ve günlük km grafiği. Hepsi sayfada hesaplanır.
 - Bakım penceresi: göstergedeki km girilir; cihaz toplam km (`vehicle.mileage`) gönderiyorsa sonrası otomatik ilerler. Km veya ay aralıklı hatırlatmalar (yağ, muayene, sigorta + özel); yaklaşan/geçen olanlar renklenir, Dock simgesinde kırmızı nokta çıkar. Bilgiler sadece bu tarayıcıda saklanır.
-- Ana ekrana eklenebilir (PWA): telefonda tarayıcı menüsünden "Ana ekrana ekle". `sw.js` sadece sitenin kendi dosyalarını önbelleğe alır; flespi verisi ve token önbelleğe girmez.
+- Ana ekrana eklenebilir (PWA): telefonda tarayıcı menüsünden "Ana ekrana ekle". `sw.js` sadece sitenin kendi dosyalarını önbelleğe alır; flespi verisi ve token önbelleğe girmez. Yeni sürüm yayınlarken `index.html` içindeki `app.js?v=N` / `style.css?v=N` numarasını artır; yoksa tarayıcı yeni HTML ile eski JS'yi karıştırabilir.
 
 ## Arayüz
 
