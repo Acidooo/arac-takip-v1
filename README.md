@@ -42,4 +42,5 @@ Teltonika FMB120 için canlı harita. Veriyi flespi alır; bu statik sayfa GitHu
 
 - OSM: OpenStreetMap standart (eski adı "Sokak").
 - Sade: açık temada Esri Light Gray, koyu temada Esri Dark Gray Canvas (tema değişince kendiliğinden geçer). CARTO artık API anahtarı istediği için kaldırıldı; anahtar repoya konmaz.
+- Topo: OpenTopoMap (yükselti eğrili topoğrafik harita; karolar z17'ye kadar).
 - Hibrit: Esri uydu + yol/yer etiketleri.

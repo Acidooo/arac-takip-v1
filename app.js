@@ -32,6 +32,11 @@ dark.addEventListener("change", fillPlain);
 const baseLayers = {
   "OSM": L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: OSM_ATTR }),
   "Sade": plain,
+  // OpenTopoMap: eş yükselti eğrili topoğrafik harita; karolar z17'ye kadar, sonrası büyütülür
+  "Topo": L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19, maxNativeZoom: 17, subdomains: "abc",
+    attribution: OSM_ATTR + ', SRTM | Stil: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA)'
+  }),
   "Hibrit": L.layerGroup([
     esri("World_Imagery", { attribution: "Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community" }),
     esri("Reference/World_Transportation"),
