@@ -4,6 +4,9 @@ const MQTT_URL = "wss://mqtt.flespi.io:443";
 const FIELDS = "timestamp,position.latitude,position.longitude,position.speed,position.direction,engine.ignition.status,external.powersource.voltage,vehicle.mileage";
 const TOKEN_KEY = "flespiToken";
 
+// Başka bir sitenin içine (iframe) gömülmeyi reddet: GitHub Pages frame-ancestors başlığı gönderemiyor
+if (window.top !== window.self) { document.documentElement.hidden = true; throw new Error("framed"); }
+
 const $ = (id) => document.getElementById(id);
 let token = load();
 let mqttClient = null;
@@ -469,7 +472,8 @@ function renderZones() {
   const last = points[points.length - 1];
   zones.forEach((z, i) => {
     L.circle([z.lat, z.lon], { radius: z.r, color: "#0a84ff", weight: 2, dashArray: "6 6", fillOpacity: .08 })
-      .bindTooltip(z.name, { direction: "top" }).addTo(zoneLayer);
+      .bindTooltip(document.createTextNode(z.name), { direction: "top" })  // metin olarak: HTML yorumlanmasın
+      .addTo(zoneLayer);
     const row = document.createElement("div");
     row.className = "zone" + (last && inZone(z, last) ? " in" : "");
     const go = document.createElement("button");
