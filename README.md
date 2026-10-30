@@ -9,11 +9,12 @@ Teltonika FMB120 için canlı harita. Veriyi flespi alır; bu statik sayfa GitHu
 - Harita: Sokak (OpenStreetMap) veya Hibrit (Esri uydu + yol/yer etiketleri).
 - Araç penceresinde durum: Seyirde / Kontak açık, duruyor / Park halinde ve park süresi (kontak bilgisi `engine.ignition.status`, yoksa hız).
 - Yolculuklar penceresi: gün seçilir, o günün mesajları sayfada yolculuklara bölünür (saat, süre, km, maks hız). Bir yolculuk seçilince rota turuncu çizilir ve zaman çubuğuyla 30×/120×/600× hızda oynatılır. Adres çözümleme yok; konum üçüncü bir servise gönderilmez.
+- Hız limiti (Yolculuklar penceresinde, varsayılan 120 km/sa, bu tarayıcıda saklanır): her yolculukta limit aşımı sayısı ve süresi, oynatmada limit üstü kısımlar kırmızı, Raporda toplam aşım, canlı hız limit üstündeyse kırmızı.
 - Bölgeler penceresi (geofence): ad + yarıçap seçilip haritaya dokunularak bölge eklenir. Şu an hangi bölgede olduğu ve seçili günün giriş/çıkışları gösterilir. Bölgeler sadece bu tarayıcının localStorage'ında durur; repoya veya flespi'ye gitmez. Sayfa kapalıyken bildirim yok (ileride flespi + Telegram).
 - Akü kutusu: cihazın beslendiği araç aküsü voltajı (`external.powersource.voltage`). Kontak kapalıyken 12,0 V altı kırmızı görünür.
 - Rapor penceresi: son 7 veya 30 günün toplam km, sürüş süresi, yolculuk sayısı, günlük ortalama, maks hız ve günlük km grafiği. Hepsi sayfada hesaplanır.
 - Bakım penceresi: göstergedeki km girilir; cihaz toplam km (`vehicle.mileage`) gönderiyorsa sonrası otomatik ilerler. Km veya ay aralıklı hatırlatmalar (yağ, muayene, sigorta + özel); yaklaşan/geçen olanlar renklenir, Dock simgesinde kırmızı nokta çıkar. Bilgiler sadece bu tarayıcıda saklanır.
-- Ana ekrana eklenebilir (PWA): telefonda tarayıcı menüsünden "Ana ekrana ekle". `sw.js` sadece sitenin kendi dosyalarını önbelleğe alır; flespi verisi ve token önbelleğe girmez.
+- Ana ekrana eklenebilir (PWA): telefonda tarayıcı menüsünden "Ana ekrana ekle". `sw.js` sadece sitenin kendi dosyalarını önbelleğe alır; flespi verisi ve token önbelleğe girmez. Yeni sürüm yayınlarken `index.html` içindeki `app.js?v=N` / `style.css?v=N` numarasını artır; yoksa tarayıcı yeni HTML ile eski JS'yi karıştırabilir.
 
 ## Arayüz
 
