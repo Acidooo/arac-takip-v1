@@ -17,7 +17,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Araç Takip">
 <link rel="stylesheet" href="vendor/leaflet.css">
-<link rel="stylesheet" href="style.css?v=12">
+<link rel="stylesheet" href="style.css?v=13">
 </head>
 <body>
 <div id="map"></div>
@@ -44,7 +44,7 @@
       <div class="state" id="state"><i></i><span id="stateText">–</span></div>
       <div class="tiles">
         <div class="tile"><span>Son konum</span><b id="ago">–</b></div>
-        <div class="tile" id="battTile" title="Araç aküsü (cihazın beslendiği voltaj)"><span>Akü</span><b id="batt">–</b></div>
+        <div class="tile" id="battTile" title="Cihazın beslendiği harici pil voltajı"><span>Harici pil</span><b id="batt">–</b></div>
       </div>
       <div class="group">
         <span class="glabel">Rota</span>
@@ -258,7 +258,7 @@
       <div class="group">
         <span class="glabel">Güç ve mod</span>
         <div class="tiles">
-          <div class="tile" id="dvExtTile"><span>Araç aküsü</span><b id="dvExt">–</b></div>
+          <div class="tile" id="dvExtTile"><span>Harici pil</span><b id="dvExt">–</b></div>
           <div class="tile" id="dvBatTile"><span>Dahili pil</span><b id="dvBat">–</b></div>
           <div class="tile"><span>Kontak · Hareket</span><b id="dvIgn">–</b></div>
           <div class="tile"><span>Uyku modu</span><b id="dvSleep">–</b></div>
@@ -406,6 +406,6 @@
 <script src="vendor/mqtt.min.js"></script>
 <script src="vendor/qrcode.js"></script>
 <!-- ?v=N: yeni sürümde N artırılır; tarayıcı eski app.js/style.css'i önbellekten vermesin -->
-<script src="app.js?v=12"></script>
+<script src="app.js?v=13"></script>
 </body>
 </html>
