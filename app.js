@@ -125,7 +125,8 @@ async function loadHistory() {
 }
 
 // Kontak bilgisi varsa onu, yoksa hızı esas al
-const isDriving = (p) => p.ign === true || (p.ign == null && (p.speed || 0) > 3);
+// Cihaz araç aküsüne değil harici pile bağlı: kontak bilgisi güvenilmez, hız da tek başına sürüş sayılır
+const isDriving = (p) => p.ign === true || (p.speed || 0) > 3;
 
 // Park süresi için son seyir anını bul (son 2 gün, en yeniden geriye)
 async function loadLastMove() {
@@ -177,7 +178,7 @@ function update(p) {
   if (typeof p.volt === "number") {
     // Kontak kapalıyken 12,0 V altı: akü zayıflıyor olabilir
     $("batt").textContent = p.volt.toLocaleString("tr-TR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + " V";
-    $("battTile").classList.toggle("low", p.volt < 12 && !isDriving(p));
+    // Harici pil: 12 V araç aküsü eşikleri geçerli değil, renk uyarısı yok
   }
   if (p.mil != null) { deviceMil = p.mil; renderService(); }
   renderAgo();
@@ -832,12 +833,9 @@ function renderDevice() {
   const bat = num(dv("battery.voltage"));  // AVL 67, cihazın kendi küçük pili
   const cur = num(dv("battery.current"));  // AVL 68
   const ign = dv("engine.ignition.status"), mov = dv("movement.status");  // AVL 239, 240
-  const charging = ext != null && ext >= 13.2;  // motor çalışırken alternatör 13,5–14,7 V verir
-  setTile("dvExt", ext == null ? "–" : nf(ext) + " V" + (charging ? " · şarj" : ""),
-    ext == null ? "" : ext < 6 ? "bad" : ext < 12 && ign !== true ? "bad" : ext < 12.3 && ign !== true ? "warn" : "good");
-  if (ext != null && ext < 6) alerts.push(["bad", "Araç gücü yok (" + nf(ext) + " V): cihaz sökülmüş veya kablosu çıkmış olabilir, dahili pille çalışıyor."]);
-  else if (ext != null && ext < 12 && ign !== true) alerts.push(["warn", "Araç aküsü zayıf (" + nf(ext) + " V, kontak kapalı)."]);
-  else if (ext != null && ext > 15) alerts.push(["warn", "Voltaj yüksek (" + nf(ext) + " V): şarj sistemi kontrol edilmeli."]);
+  // Cihaz araç aküsüne değil harici pile bağlı: araç aküsü eşikleri (12 V, şarj) uygulanmaz
+  setTile("dvExt", ext == null ? "–" : nf(ext) + " V", ext == null ? "" : ext < 6 ? "bad" : "good");
+  if (ext != null && ext < 6) alerts.push(["bad", "Harici güç yok (" + nf(ext) + " V): pil bitmiş veya kablo çıkmış olabilir, cihaz dahili pille çalışıyor."]);
   setTile("dvBat", bat == null ? "–" : nf(bat, 2) + " V" + (cur != null && cur > 0.005 ? " · şarj" : ""),
     bat == null ? "" : bat < 3.6 ? "bad" : bat < 3.8 ? "warn" : "good");
   if (bat != null && bat < 3.6) alerts.push(["warn", "Cihazın dahili pili düşük (" + nf(bat, 2) + " V): araç gücü kesilirse uzun dayanmaz."]);
