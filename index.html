@@ -17,7 +17,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Araç Takip">
 <link rel="stylesheet" href="vendor/leaflet.css">
-<link rel="stylesheet" href="style.css?v=9">
+<link rel="stylesheet" href="style.css?v=10">
 </head>
 <body>
 <div id="map"></div>
@@ -235,15 +235,27 @@
     </header>
     <div class="wbody">
       <p class="hint">Linki açan kişi sadece aracın <b>canlı konumunu</b> görür; geçmiş, rota ve bölgeler görünmez.</p>
-      <ol class="steps">
-        <li>flespi panelinde <b>Tokens → +</b>: ACL'de <code>gw/devices</code>, sadece bu cihaz, sadece <b>GET</b>, alt modül sadece <b>telemetry</b>.</li>
-        <li><b>Expire</b> alanına bitiş zamanı ver (ör. 2 saat sonra).</li>
-        <li>Token'ı aşağı yapıştır, link oluştur.</li>
-      </ol>
-      <form id="shareForm" class="group">
-        <input id="shareToken" class="field" type="password" autocomplete="off" spellcheck="false" placeholder="Paylaşım token'ı">
-        <button type="submit" class="glassbtn wide">Link oluştur</button>
-      </form>
+      <div id="shareSetup" class="group">
+        <span class="glabel">Bir kerelik kurulum</span>
+        <ol class="steps">
+          <li>flespi panelinde <b>Tokens → +</b>: ACL'de <code>gw/devices</code>, sadece bu cihaz, sadece <b>GET</b>, alt modül sadece <b>telemetry</b>. Expire: uzun (ör. 1 yıl).</li>
+          <li>Token'ı aşağı yapıştır ve kaydet. Bu cihazda saklanır.</li>
+        </ol>
+        <form id="shareForm" class="group">
+          <input id="shareToken" class="field" type="password" autocomplete="off" spellcheck="false" placeholder="Paylaşım token'ı">
+          <button type="submit" class="glassbtn wide">Kaydet</button>
+        </form>
+      </div>
+      <div id="shareReady" class="group" hidden>
+        <span class="glabel">Ne kadar süre izlesin?</span>
+        <div class="seg" id="shareDur" role="radiogroup" aria-label="Paylaşım süresi">
+          <button type="button" data-v="1" role="radio">1 saat</button>
+          <button type="button" data-v="24" role="radio">1 gün</button>
+          <button type="button" data-v="168" role="radio" class="on">1 hafta</button>
+        </div>
+        <button type="button" class="glassbtn wide" id="shareMake">QR oluştur</button>
+        <button type="button" class="linkbtn" id="shareReset">Paylaşım token'ını değiştir</button>
+      </div>
       <p class="note" id="shareNote"></p>
       <div id="shareOut" class="group" hidden>
         <canvas id="shareQr" class="qr" width="232" height="232" aria-label="Paylaşım linki QR kodu"></canvas>
@@ -253,7 +265,8 @@
           <button type="button" class="glassbtn wide" id="shareSend">Paylaş…</button>
           <button type="button" class="glassbtn wide" id="shareSave">QR indir</button>
         </div>
-        <p class="hint small">İptal etmek için token'ı flespi'den sil. Süresi dolunca link kendiliğinden çalışmaz.</p>
+        <p class="hint small" id="shareUntil"></p>
+        <p class="hint small">Süre dolunca link açılmaz. Verdiğin tüm linkleri hemen kapatmak için flespi'de token'ı sil, yenisini kaydet.</p>
       </div>
     </div>
   </section>
@@ -333,6 +346,6 @@
 <script src="vendor/mqtt.min.js"></script>
 <script src="vendor/qrcode.js"></script>
 <!-- ?v=N: yeni sürümde N artırılır; tarayıcı eski app.js/style.css'i önbellekten vermesin -->
-<script src="app.js?v=9"></script>
+<script src="app.js?v=10"></script>
 </body>
 </html>
