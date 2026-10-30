@@ -829,6 +829,10 @@ function renderDevice() {
   $("dvDop").title = (hdop != null ? "HDOP " + nf(hdop) : "") + (pdop != null ? " · PDOP " + nf(pdop) : "");
   if (hdop != null && hdop > 5 && fix) alerts.push(["warn", "GPS hassasiyeti düşük (HDOP " + nf(hdop) + "): konum birkaç on metre kayabilir."]);
   $("dvGnss").textContent = gs == null ? "–" : GNSS_TEXT[gs] ?? gs;
+  // GNSS jammer (AVL 318): 0 yok, 1 uyarı, 2 kritik; flespi adı doğrulanmadı, "jamming" geçen alan aranır
+  const jam = num(dv("gnss.jamming.status", "gnss.jamming.state", /gnss.*jamm/));
+  if (jam === 2) alerts.push(["bad", "GPS sinyali bastırılıyor (jammer): konum alınamıyor, haritadaki konum son geçerli konum."]);
+  else if (jam === 1) alerts.push(["warn", "GPS sinyalinde jammer belirtisi: konum kayabilir."]);
 
   // --- Güç ---
   const ext = num(dv("external.powersource.voltage"));  // AVL 66
