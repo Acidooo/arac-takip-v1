@@ -295,3 +295,29 @@ body.share #desktop, body.share #dock, body.share #login, body.share #pickBar { 
 .qr { display: block; margin: 0 auto; width: 200px; height: 200px; border-radius: 12px; background: #fff; image-rendering: pixelated; }
 #shareSetup[hidden], #shareReady[hidden] { display: none; }
 .linkbtn { border: 0; background: none; padding: 2px; color: var(--accent); font-size: 12px; justify-self: center; }
+
+/* ---------- Cihaz durumu ---------- */
+.window[data-win="device"] { right: 280px; top: 16px; width: 320px; }
+.window[data-win="device"] .wbody { max-height: calc(100vh - 140px); overflow-y: auto; }
+.window[data-win="device"] .tile b { display: flex; align-items: center; gap: 6px; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.window[data-win="device"] .tile b em { font-style: normal; }
+.tile.good b { color: var(--ok); } .tile.warn b { color: var(--warn); } .tile.bad b { color: var(--bad); }
+/* Sinyal çubukları: .l0–.l5 kaç çubuğun dolu olduğunu söyler */
+.sigbars { display: inline-flex; align-items: flex-end; gap: 2px; height: 14px; flex: none; }
+.sigbars i { width: 3px; border-radius: 1px; background: var(--fill); background: color-mix(in srgb, var(--fg) 18%, transparent); }
+.sigbars i:nth-child(1) { height: 20%; } .sigbars i:nth-child(2) { height: 40%; } .sigbars i:nth-child(3) { height: 60%; }
+.sigbars i:nth-child(4) { height: 80%; } .sigbars i:nth-child(5) { height: 100%; }
+.sigbars.l1 i:nth-child(-n+1), .sigbars.l2 i:nth-child(-n+2), .sigbars.l3 i:nth-child(-n+3),
+.sigbars.l4 i:nth-child(-n+4), .sigbars.l5 i:nth-child(-n+5) { background: currentColor; }
+#dvSigTile b { color: var(--ok); } #dvSigTile.warn b { color: var(--warn); } #dvSigTile.bad b { color: var(--bad); }
+.alerts { display: grid; gap: 6px; }
+.alerts:empty { display: none; }
+.alert { margin: 0; padding: 7px 10px; border-radius: 10px; font-size: 12px; font-weight: 500; background: var(--fill); }
+.alert.ok { box-shadow: inset 3px 0 0 var(--ok); color: var(--muted); }
+.alert.warn { box-shadow: inset 3px 0 0 var(--warn); }
+.alert.bad { box-shadow: inset 3px 0 0 var(--bad); }
+.raw summary { cursor: pointer; color: var(--muted); font-size: 12px; font-weight: 600; }
+.rawlist { display: grid; gap: 1px; margin: 6px 0; max-height: 220px; overflow-y: auto; font-size: 11px; font-variant-numeric: tabular-nums; }
+.rawlist div { display: flex; justify-content: space-between; gap: 8px; padding: 2px 0; border-bottom: 1px solid var(--hair); }
+.rawlist span { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rawlist b { font-weight: 600; text-align: right; overflow-wrap: anywhere; }

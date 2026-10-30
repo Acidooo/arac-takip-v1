@@ -15,13 +15,14 @@ Teltonika FMB120 için canlı harita. Veriyi flespi alır; bu statik sayfa GitHu
 - Akü kutusu: cihazın beslendiği araç aküsü voltajı (`external.powersource.voltage`). Kontak kapalıyken 12,0 V altı kırmızı görünür.
 - Rapor penceresi: son 7 veya 30 günün toplam km, sürüş süresi, yolculuk sayısı, günlük ortalama, maks hız ve günlük km grafiği. Hepsi sayfada hesaplanır.
 - Bakım penceresi: göstergedeki km girilir; cihaz toplam km (`vehicle.mileage`) gönderiyorsa sonrası otomatik ilerler. Km veya ay aralıklı hatırlatmalar (yağ, muayene, sigorta + özel); yaklaşan/geçen olanlar renklenir, Dock simgesinde kırmızı nokta çıkar. Bilgiler sadece bu tarayıcıda saklanır.
+- Cihaz durumu penceresi: flespi telemetry'deki son değerler + canlı MQTT mesajlarıyla hat ve GPS sağlığı. Hat: GSM sinyali (`gsm.signal.level`, AVL 21, 0–5 çubuk), operatör (`gsm.operator.code`, AVL 241; 28601 Turkcell, 28602 Vodafone, 28603 Türk Telekom), yurt içi/dolaşım (veri modu AVL 80, yoksa MCC≠286), baz istasyonu LAC/Cell ID (AVL 206/205). GPS: konum bulundu mu (`gnss.state.enum`, AVL 69), uydu sayısı, HDOP'tan kaba hata tahmini (HDOP×5 m), GPS modülü durumu. Güç: araç aküsü (AVL 66), dahili pil (AVL 67/68), kontak/hareket (239/240), uyku modu (AVL 200). Bağlantı: son veri zamanı ve kaydın flespi'ye ulaşma gecikmesi. Zayıf sinyal, dolaşım, GPS bulamama, akü zayıf / güç kesik, gecikmeli kayıt ve uzun sessizlik için uyarı çıkar; ciddi uyarıda Dock simgesinde kırmızı nokta. "Tüm parametreler" listesi cihazın gönderdiği her şeyi gösterir; IMEI, ICCID, IP gibi kimlik bilgileri listeden çıkarılır. Paylaşım linkinde bu pencere yok.
 - Ana ekrana eklenebilir (PWA): telefonda tarayıcı menüsünden "Ana ekrana ekle". `sw.js` sadece sitenin kendi dosyalarını önbelleğe alır; flespi verisi ve token önbelleğe girmez. Yeni sürüm yayınlarken `index.html` içindeki `app.js?v=N` / `style.css?v=N` numarasını artır; yoksa tarayıcı yeni HTML ile eski JS'yi karıştırabilir.
 
 ## Arayüz
 
 - Apple tarzı cam (buzlu cam, blur) pencereler: macOS gibi başlık çubuğu, kırmızı = kapat, sarı = küçült (ya da başlığa çift tıkla).
 - Pencereler masaüstünde başlıktan sürüklenir; konumları bu tarayıcıda hatırlanır. Telefonda üstte tek pencere açık kalır.
-- Alttaki Dock: Araç, Harita, Yolculuklar, Bölgeler, Rapor, Bakım ve Paylaş pencerelerini açar/kapatır (ilk açılışta sadece Araç ve Harita açık), aracı ortalar, çıkış yapar.
+- Alttaki Dock: Araç, Harita, Yolculuklar, Bölgeler, Rapor, Bakım, Cihaz durumu ve Paylaş pencerelerini açar/kapatır (ilk açılışta sadece Araç ve Harita açık), aracı ortalar, çıkış yapar.
 - Yeni panel eklemek: `index.html` içinde `#desktop` altına `<section class="window" data-win="ad">` ve Dock'a `data-toggle="ad"` düğmesi eklemek yeterli; pencere yöneticisi gerisini halleder.
 - Açık/koyu tema sistem ayarına göre otomatik.
 
