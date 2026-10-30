@@ -206,6 +206,7 @@ function connectLive() {
   });
   mqttClient.on("message", (_topic, payload) => {
     let m; try { m = JSON.parse(payload.toString()); } catch { return; }
+    devMessage(m);  // konumsuz mesajlar da cihaz durumunu günceller
     const p = toPoint(m);
     if (!p || p.t < lastTs) return;
     points.push(p);
@@ -227,6 +228,7 @@ async function start() {
     loadLastMove().catch(() => {});
     loadDay();
     loadReport();
+    loadDevice().catch(() => {});
     status("wait", "Canlı bağlantı kuruluyor…");
     connectLive();
   } catch (e) {
@@ -731,6 +733,165 @@ $("svcList").addEventListener("click", (e) => {
   }
 });
 renderService();
+
+// ---------- Cihaz durumu ----------
+// Hat (GSM), GPS, güç ve bağlantı bilgileri. İlk değerler flespi telemetry'den (her parametrenin son değeri),
+// sonra her MQTT mesajıyla güncellenir. Parametre adları flespi'nin Teltonika adlarıdır; yanında FMB AVL ID'si.
+const devTele = {};  // ad -> { v, ts }
+const SENSITIVE = /ident|imei|iccid|imsi|peer|phone|msisdn|sim\.number|password/i;
+const OPERATORS = { "28601": "Turkcell", "28602": "Vodafone", "28603": "Türk Telekom", "28604": "Türk Telekom" };
+const SIG_TEXT = ["Yok", "Çok zayıf", "Zayıf", "Orta", "İyi", "Çok iyi"];
+const GNSS_TEXT = ["Kapalı", "Açık", "Açık, konum yok", "Uykuda", "Açık, veri geçersiz"];  // AVL 69
+const SLEEP_TEXT = ["Uyanık", "GPS uykusu", "Derin uyku", "Online uyku", "Ultra derin uyku"];  // AVL 200
+const DATA_MODE = ["Yurt içi", "Yurt içi", "Dolaşım", "Dolaşım", "Bilinmiyor", "Bilinmiyor"];  // AVL 80 (çift: duruyor, tek: hareketli)
+
+// İlk bulunan anahtarın değeri; flespi adı sürüme göre değişebildiği için birkaç aday denenir
+function dv(...keys) {
+  for (const k of keys) {
+    if (k instanceof RegExp) { const f = Object.keys(devTele).find(x => k.test(x) && devTele[x].v != null); if (f) return devTele[f].v; }
+    else if (devTele[k] && devTele[k].v != null) return devTele[k].v;
+  }
+  return null;
+}
+const num = (v) => typeof v === "number" ? v : typeof v === "string" && v.trim() !== "" && !isNaN(v) ? +v : null;
+const nf = (n, d = 1) => n.toLocaleString("tr-TR", { minimumFractionDigits: d, maximumFractionDigits: d });
+const ago = (s) => s < 60 ? "az önce" : s < 3600 ? Math.floor(s / 60) + " dk önce" : s < 86400 ? Math.floor(s / 3600) + " sa önce" : Math.floor(s / 86400) + " gün önce";
+
+async function loadDevice() {
+  const r = await api(`/gw/devices/${DEVICE_ID}/telemetry/all`);
+  const t = r[0]?.telemetry || {};
+  for (const k in t) devTele[k] = { v: t[k].value, ts: t[k].ts };
+  renderDevice();
+}
+function devMessage(m) {
+  const ts = m.timestamp || Date.now() / 1000;
+  for (const k in m) if (!devTele[k] || devTele[k].ts <= ts) devTele[k] = { v: m[k], ts };
+  renderDevice();
+}
+
+function setTile(id, text, cls) {
+  $(id).textContent = text;
+  const tile = $(id).closest(".tile");
+  if (tile) { tile.classList.remove("good", "warn", "bad"); if (cls) tile.classList.add(cls); }
+}
+
+function renderDevice() {
+  const keys = Object.keys(devTele);
+  if (!keys.length) return;
+  const now = Date.now() / 1000;
+  const alerts = [];  // [seviye, metin]
+
+  // --- Hat ---
+  const sig = num(dv("gsm.signal.level"));  // AVL 21, 0–5
+  $("dvBars").className = "sigbars l" + (sig ?? 0);
+  $("dvSig").textContent = sig == null ? "–" : SIG_TEXT[sig] ?? sig;
+  $("dvSigTile").classList.toggle("bad", sig != null && sig <= 1);
+  $("dvSigTile").classList.toggle("warn", sig === 2);
+  if (sig != null && sig <= 1) alerts.push(["warn", "GSM sinyali çok zayıf: veri gecikebilir, SMS geç ulaşabilir."]);
+
+  const opRaw = dv("gsm.operator.code", /operator\.code/);  // AVL 241, MCC+MNC (ör. 28601)
+  const op = opRaw == null ? "" : String(opRaw);
+  const mcc = op.slice(0, 3);
+  $("dvOp").textContent = !op || op === "0" ? "–" : OPERATORS[op] || "Kod " + op;
+  $("dvOp").title = op ? "MCC " + mcc + " · MNC " + op.slice(3) : "";
+
+  const dm = num(dv("data.mode.enum", "data.mode", /^(gsm\.)?data\.mode/));  // AVL 80
+  const roaming = dm != null ? dm === 2 || dm === 3 : op && op !== "0" ? mcc !== "286" : null;
+  setTile("dvNet", roaming == null ? "–" : roaming ? "Dolaşım" : dm != null ? DATA_MODE[dm] : "Yurt içi",
+    roaming ? "warn" : roaming === false ? "good" : "");
+  if (dm === 4 || dm === 5) $("dvNet").textContent = "Bilinmiyor";
+  if (roaming) alerts.push(["warn", "SIM dolaşımda (yurt dışı ağ): veri ücreti yüksek olabilir."]);
+
+  const cell = dv("gsm.cellid"), lac = dv("gsm.lac");  // AVL 205, 206
+  $("dvCell").textContent = cell == null ? "–" : (lac != null ? lac + " / " : "") + cell;
+  $("dvCell").title = "LAC (bölge kodu) / Cell ID";
+
+  // --- GPS ---
+  const gs = num(dv("gnss.state.enum", /^gnss\.state/));  // AVL 69
+  const valid = dv("position.valid");
+  const sat = num(dv("position.satellites"));
+  const hdop = num(dv("position.hdop")), pdop = num(dv("position.pdop"));  // AVL 182, 181
+  const fix = gs != null ? gs === 1 : valid != null ? !!valid : sat != null ? sat >= 4 : null;
+  setTile("dvFix", fix == null ? "–" : fix ? "Bulundu" : gs === 3 ? "GPS uykuda" : gs === 0 ? "GPS kapalı" : "Aranıyor",
+    fix ? "good" : fix === false ? (gs === 3 ? "" : "bad") : "");
+  if (fix === false && gs !== 3 && gs !== 0) alerts.push(["bad", "GPS konum bulamıyor: kapalı otopark, anten kapalı veya cihaz yeni uyandı."]);
+  setTile("dvSat", sat == null ? "–" : sat + (sat >= 8 ? " · iyi" : sat >= 5 ? " · orta" : " · zayıf"),
+    sat == null ? "" : sat >= 8 ? "good" : sat >= 5 ? "warn" : "bad");
+  // HDOP × ~5 m ≈ yatay konum hatası (kaba tahmin)
+  setTile("dvDop", hdop == null ? "–" : "≈ " + Math.max(2, Math.round(hdop * 5)) + " m",
+    hdop == null ? "" : hdop <= 1.5 ? "good" : hdop <= 3 ? "warn" : "bad");
+  $("dvDop").title = (hdop != null ? "HDOP " + nf(hdop) : "") + (pdop != null ? " · PDOP " + nf(pdop) : "");
+  if (hdop != null && hdop > 5 && fix) alerts.push(["warn", "GPS hassasiyeti düşük (HDOP " + nf(hdop) + "): konum birkaç on metre kayabilir."]);
+  $("dvGnss").textContent = gs == null ? "–" : GNSS_TEXT[gs] ?? gs;
+
+  // --- Güç ---
+  const ext = num(dv("external.powersource.voltage"));  // AVL 66
+  const bat = num(dv("battery.voltage"));  // AVL 67, cihazın kendi küçük pili
+  const cur = num(dv("battery.current"));  // AVL 68
+  const ign = dv("engine.ignition.status"), mov = dv("movement.status");  // AVL 239, 240
+  const charging = ext != null && ext >= 13.2;  // motor çalışırken alternatör 13,5–14,7 V verir
+  setTile("dvExt", ext == null ? "–" : nf(ext) + " V" + (charging ? " · şarj" : ""),
+    ext == null ? "" : ext < 6 ? "bad" : ext < 12 && ign !== true ? "bad" : ext < 12.3 && ign !== true ? "warn" : "good");
+  if (ext != null && ext < 6) alerts.push(["bad", "Araç gücü yok (" + nf(ext) + " V): cihaz sökülmüş veya kablosu çıkmış olabilir, dahili pille çalışıyor."]);
+  else if (ext != null && ext < 12 && ign !== true) alerts.push(["warn", "Araç aküsü zayıf (" + nf(ext) + " V, kontak kapalı)."]);
+  else if (ext != null && ext > 15) alerts.push(["warn", "Voltaj yüksek (" + nf(ext) + " V): şarj sistemi kontrol edilmeli."]);
+  setTile("dvBat", bat == null ? "–" : nf(bat, 2) + " V" + (cur != null && cur > 0.005 ? " · şarj" : ""),
+    bat == null ? "" : bat < 3.6 ? "bad" : bat < 3.8 ? "warn" : "good");
+  if (bat != null && bat < 3.6) alerts.push(["warn", "Cihazın dahili pili düşük (" + nf(bat, 2) + " V): araç gücü kesilirse uzun dayanmaz."]);
+  const yn = (b, on, off) => b == null ? "?" : b ? on : off;
+  $("dvIgn").textContent = ign == null && mov == null ? "–" : yn(ign, "Açık", "Kapalı") + " · " + yn(mov, "Var", "Yok");
+
+  const sl = num(dv("sleep.mode.enum", /^sleep\.mode/));  // AVL 200
+  $("dvSleep").textContent = sl == null ? "–" : SLEEP_TEXT[sl] ?? sl;
+
+  // --- Bağlantı ---
+  const last = Math.max(...keys.map(k => devTele[k].ts || 0));
+  const silent = now - last;
+  setTile("dvLast", ago(silent), silent < 600 ? "good" : silent < 3 * 3600 ? "warn" : "bad");
+  $("dvLast").title = new Date(last * 1000).toLocaleString("tr-TR");
+  const dts = num(dv("timestamp")), sts = num(dv("server.timestamp"));
+  const lag = dts != null && sts != null ? sts - dts : null;
+  setTile("dvLag", lag == null ? "–" : lag < 5 ? "Yok" : lag < 3600 ? Math.round(lag / 60) + " dk" : dur(lag), lag == null ? "" : lag < 120 ? "good" : "warn");
+  $("dvLag").title = "Kaydın oluşması ile flespi'ye ulaşması arasındaki süre";
+  if (lag != null && lag > 300) alerts.push(["warn", "Son kayıt " + dur(lag) + " gecikmeyle geldi: cihaz o sırada hatta bağlanamamış, kayıtları sonradan gönderdi."]);
+  if (silent > 3 * 3600 && ign === true) alerts.push(["bad", "Kontak açık görünüyor ama " + dur(silent) + " veri yok: hat/kontör veya cihaz arızası olabilir."]);
+  else if (silent > 26 * 3600) alerts.push(["bad", dur(silent) + " veri yok: SIM'in internet paketini ve cihazın gücünü kontrol et."]);
+
+  let pill = "live", pillText = "Çevrimiçi";
+  if (silent > 26 * 3600) { pill = "err"; pillText = "Sessiz"; }
+  else if (silent > 600) { pill = "wait"; pillText = sl > 0 || ign === false ? "Uykuda" : "Bekleniyor"; }
+  $("devPill").className = "pill " + pill; $("devPillText").textContent = pillText;
+
+  // --- Uyarılar ---
+  const box = $("devAlerts"); box.innerHTML = "";
+  for (const [lvl, text] of alerts) {
+    const p = document.createElement("p"); p.className = "alert " + lvl; p.textContent = text; box.append(p);
+  }
+  if (!alerts.length) { const p = document.createElement("p"); p.className = "alert ok"; p.textContent = "Her şey normal görünüyor."; box.append(p); }
+  $("devBadge").hidden = !alerts.some(a => a[0] === "bad");
+
+  // --- Ham liste (kimlik bilgileri hariç) ---
+  const shown = keys.filter(k => !SENSITIVE.test(k)).sort();
+  $("dvRawN").textContent = "(" + shown.length + ")";
+  if ($("dvRaw").closest("details").open) renderRaw(shown);
+}
+function renderRaw(shown) {
+  const list = $("dvRaw"); list.innerHTML = "";
+  for (const k of shown || Object.keys(devTele).filter(k => !SENSITIVE.test(k)).sort()) {
+    const row = document.createElement("div");
+    const a = document.createElement("span"), b = document.createElement("b");
+    a.textContent = k;
+    const v = devTele[k].v;
+    b.textContent = typeof v === "object" ? JSON.stringify(v) : String(v);
+    row.title = new Date(devTele[k].ts * 1000).toLocaleString("tr-TR");
+    row.append(a, b); list.append(row);
+  }
+}
+$("dvRaw").closest("details").addEventListener("toggle", (e) => { if (e.target.open) renderRaw(); });
+$("dvRefresh").addEventListener("click", () => {
+  if (token) loadDevice().catch(e => { $("devAlerts").textContent = "Veri alınamadı: " + e.message; });
+});
+setInterval(renderDevice, 30000);
 
 // ---------- Pencere yöneticisi ----------
 // Her .window[data-win]: başlıktan sürüklenir, sarı düğme küçültür, kırmızı kapatır, Dock geri açar.
