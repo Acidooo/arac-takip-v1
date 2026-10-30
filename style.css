@@ -286,3 +286,4 @@ body.share #desktop, body.share #dock, body.share #login, body.share #pickBar { 
 .sharecard { position: fixed; z-index: 1000; left: 50%; transform: translateX(-50%); bottom: max(16px, env(safe-area-inset-bottom));
   width: min(360px, calc(100% - 32px)); }
 .sharecard .hero { gap: 12px; }
+.qr { display: block; margin: 0 auto; width: 200px; height: 200px; border-radius: 12px; background: #fff; image-rendering: pixelated; }

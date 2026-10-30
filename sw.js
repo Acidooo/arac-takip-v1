@@ -1,8 +1,8 @@
 // Sadece bu sitenin kendi dosyaları önbelleğe alınır (çevrimdışı açılış için).
 // flespi, harita karoları ve diğer dış adresler hiç dokunulmadan ağdan gelir.
-const CACHE = "arac-takip-v2";
+const CACHE = "arac-takip-v3";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icons/icon.svg",
-  "vendor/leaflet.css", "vendor/leaflet.js", "vendor/mqtt.min.js"];
+  "vendor/leaflet.css", "vendor/leaflet.js", "vendor/mqtt.min.js", "vendor/qrcode.js"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

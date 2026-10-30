@@ -10,7 +10,7 @@ Teltonika FMB120 için canlı harita. Veriyi flespi alır; bu statik sayfa GitHu
 - Araç penceresinde durum: Seyirde / Kontak açık, duruyor / Park halinde ve park süresi (kontak bilgisi `engine.ignition.status`, yoksa hız).
 - Yolculuklar penceresi: gün seçilir, o günün mesajları sayfada yolculuklara bölünür (saat, süre, km, maks hız). Bir yolculuk seçilince rota turuncu çizilir ve zaman çubuğuyla 30×/120×/600× hızda oynatılır. Adres çözümleme yok; konum üçüncü bir servise gönderilmez.
 - Hız limiti (Yolculuklar penceresinde, varsayılan 120 km/sa, bu tarayıcıda saklanır): her yolculukta limit aşımı sayısı ve süresi, oynatmada limit üstü kısımlar kırmızı, Raporda toplam aşım, canlı hız limit üstündeyse kırmızı.
-- Paylaş penceresi: flespi'de ayrı, süreli (Expire), sadece `telemetry` okuyabilen bir token oluşturulur ve yapıştırılır; sayfa `.../#share=<token>` linki üretir. Linki açan sadece canlı konum ve hızı görür (10 sn'de bir); geçmiş, rota, bölgeler görünmez, token kaydedilmez. Geçmişi de okuyabilen veya ana token reddedilir. `#` sonrası GitHub'a gönderilmez. İptal: token'ı flespi'den sil.
+- Paylaş penceresi: flespi'de ayrı, süreli (Expire), sadece `telemetry` okuyabilen bir token oluşturulur ve yapıştırılır; sayfa `.../#share=<token>` linki ve QR kodunu üretir (QR sayfada çizilir, dışarı gönderilmez). Linki açan sadece canlı konum ve hızı görür (10 sn'de bir); geçmiş, rota, bölgeler görünmez, token kaydedilmez. Geçmişi de okuyabilen veya ana token reddedilir. `#` sonrası GitHub'a gönderilmez. İptal: token'ı flespi'den sil.
 - Bölgeler penceresi (geofence): ad + yarıçap seçilip haritaya dokunularak bölge eklenir. Şu an hangi bölgede olduğu ve seçili günün giriş/çıkışları gösterilir. Bölgeler sadece bu tarayıcının localStorage'ında durur; repoya veya flespi'ye gitmez. Sayfa kapalıyken bildirim yok (ileride flespi + Telegram).
 - Akü kutusu: cihazın beslendiği araç aküsü voltajı (`external.powersource.voltage`). Kontak kapalıyken 12,0 V altı kırmızı görünür.
 - Rapor penceresi: son 7 veya 30 günün toplam km, sürüş süresi, yolculuk sayısı, günlük ortalama, maks hız ve günlük km grafiği. Hepsi sayfada hesaplanır.
@@ -30,7 +30,7 @@ Teltonika FMB120 için canlı harita. Veriyi flespi alır; bu statik sayfa GitHu
 - **Repoda hiçbir sır yok.** Token, IMEI, flespi kanal adresi ve SIM numarası koda/commit'lere girmez. Sadece cihazın flespi ID'si var; token olmadan tek başına işe yaramaz.
 - Token sayfaya giriş ekranından yapıştırılır. "Bu cihazda hatırla" kapalıysa sekme kapanınca silinir.
 - Kullanılan token **salt-okuma** ve **tek cihazla sınırlı** olmalı (ACL: `gw/devices`, sadece bu cihaz ID'si, sadece GET, `messages` + `telemetry`). Master token asla kullanılmaz.
-- Kütüphaneler (Leaflet 1.9.4, mqtt.js 5.10.1) `vendor/` içinde; dış CDN'den kod yüklenmez.
+- Kütüphaneler (Leaflet 1.9.4, mqtt.js 5.10.1, qrcode-generator 1.4.4) `vendor/` içinde; dış CDN'den kod yüklenmez.
 - Content-Security-Policy: script ve stil sadece bu siteden; ağ bağlantısı sadece flespi'ye; görseller sadece harita sunucularından.
 - Token sızarsa: flespi panelinde **Tokens** sayfasından silip yenisini oluştur.
 
