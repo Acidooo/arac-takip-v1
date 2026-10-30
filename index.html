@@ -104,6 +104,11 @@
         <div class="tile"><span>Yolculuk</span><b id="tripCount">–</b></div>
         <div class="tile"><span>Toplam</span><b id="tripKm">–</b></div>
       </div>
+      <label class="limitrow">
+        <span>Hız limiti</span>
+        <input id="speedLimit" class="field" type="number" inputmode="numeric" min="30" max="250" step="10" aria-label="Hız limiti (km/sa)">
+        <span>km/sa</span>
+      </label>
       <div id="tripList" class="triplist" aria-live="polite"></div>
       <div id="player" class="player" hidden>
         <div class="btnrow">
@@ -175,9 +180,10 @@
         <span class="glabel">Günlük km</span>
         <div id="repChart" class="bars" role="img" aria-label="Günlük km grafiği"></div>
       </div>
-      <div class="tiles">
+      <div class="tiles three">
         <div class="tile"><span>Günlük ort.</span><b id="repAvg">–</b></div>
         <div class="tile"><span>Maks hız</span><b id="repMax">–</b></div>
+        <div class="tile" id="repOverTile"><span>Limit aşımı</span><b id="repOver">–</b></div>
       </div>
       <p class="hint small" id="repNote"></p>
     </div>

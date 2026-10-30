@@ -157,6 +157,7 @@ function update(p) {
   marker.setLatLng([p.lat, p.lon]);
   if (!map.hasLayer(marker)) marker.addTo(map);
   $("speed").textContent = p.speed == null ? "–" : Math.round(p.speed);
+  $("speed").parentElement.classList.toggle("over", (p.speed || 0) > speedLimit);
   if (typeof p.dir === "number") {
     // CSP inline stil özniteliğine izin vermez; CSSOM ile döndürmek serbest
     const rot = "rotate(" + p.dir + "deg)";
@@ -266,7 +267,12 @@ $("recenter").addEventListener("click", () => {
 const STOP_GAP = 180, MIN_TRIP_M = 300;
 const tripLayer = L.polyline([], { color: "#ff9f0a", weight: 5, opacity: .9, lineCap: "round", lineJoin: "round" });
 const ghost = L.marker([0, 0], { icon: L.divIcon({ className: "", html: '<div class="ghost"></div>', iconSize: [16, 16] }) });
-let trips = [], dayPoints = [], replay = null;  // replay: {trip, t, playing}
+let trips = [], dayPoints = [], replay = null;
+const OVER_STYLE = { color: "#ff453a", weight: 6, opacity: .95, lineCap: "round", lineJoin: "round" };
+const overLayer = L.layerGroup();
+const LIMIT_KEY = "speedLimit";
+let speedLimit = 120;
+try { const v = +localStorage.getItem(LIMIT_KEY); if (v >= 30 && v <= 250) speedLimit = v; } catch {}  // replay: {trip, t, playing}
 
 const pad = (n) => String(n).padStart(2, "0");
 const ymd = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -298,13 +304,18 @@ function splitTrips(pts) {
     let end = tr.pts.length - 1;
     while (end > 0 && !isDriving(tr.pts[end])) end--;
     const ps = tr.pts.slice(0, end + 1);
-    let dist = 0, vmax = 0;
+    let dist = 0, vmax = 0, overN = 0, overS = 0;
     for (let i = 1; i < ps.length; i++) {
       const d = haversine(ps[i - 1], ps[i]);
       if (d < 5000) dist += d;  // GPS sıçramalarını sayma
       vmax = Math.max(vmax, ps[i].speed || 0);
+      // Limit aşımı: limitin üstüne her çıkış bir aşım; süre için nokta aralığı en fazla 60 sn sayılır
+      const over = (ps[i].speed || 0) > speedLimit, wasOver = (ps[i - 1].speed || 0) > speedLimit;
+      if (over && !wasOver) overN++;
+      if (over) overS += Math.min(60, ps[i].t - ps[i - 1].t);
     }
-    return { pts: ps, t0: ps[0].t, t1: ps[ps.length - 1].t, dist, vmax };
+    if ((ps[0].speed || 0) > speedLimit) overN++;
+    return { pts: ps, t0: ps[0].t, t1: ps[ps.length - 1].t, dist, vmax, overN, overS };
   }).filter(tr => tr.dist >= MIN_TRIP_M && tr.pts.length > 1);
 }
 
@@ -335,7 +346,8 @@ async function loadDay() {
     const b = document.createElement("button");
     b.type = "button"; b.className = "trip"; b.dataset.i = i;
     b.innerHTML = `<b>${hm(tr.t0)} – ${hm(tr.t1)}</b><b class="r">${km(tr.dist)}</b>` +
-      `<span>${dur(tr.t1 - tr.t0)}</span><span class="r">maks ${Math.round(tr.vmax)} km/sa</span>`;
+      `<span>${dur(tr.t1 - tr.t0)}</span><span class="r">maks ${Math.round(tr.vmax)} km/sa</span>` +
+      (tr.overN ? `<span class="over">${tr.overN} limit aşımı · ${tr.overS < 60 ? tr.overS + " sn" : dur(tr.overS)}</span>` : "");
     list.append(b);
   });
 }
@@ -346,6 +358,15 @@ function selectTrip(i) {
   $("follow").checked = false;
   route.setStyle({ opacity: .25 });
   tripLayer.setLatLngs(tr.pts.map(p => [p.lat, p.lon])).addTo(map);
+  // Limit üstü kısımları kırmızı çiz
+  overLayer.clearLayers();
+  let seg = [];
+  for (const p of tr.pts) {
+    if ((p.speed || 0) > speedLimit) seg.push([p.lat, p.lon]);
+    else { if (seg.length) { seg.push([p.lat, p.lon]); L.polyline(seg, OVER_STYLE).addTo(overLayer); } seg = []; }
+  }
+  if (seg.length > 1) L.polyline(seg, OVER_STYLE).addTo(overLayer);
+  overLayer.addTo(map);
   // Telefonda pencere haritanın üstünü kapatır; rotayı altta kalan alana sığdır
   const top = narrow.matches ? document.querySelector('.window[data-win="trips"]').getBoundingClientRect().bottom + 20 : 60;
   map.fitBounds(tripLayer.getBounds(), { paddingTopLeft: [40, top], paddingBottomRight: [40, 90] });
@@ -387,12 +408,20 @@ function tick(now) {
 
 function stopReplay() {
   replay = null;
-  tripLayer.remove(); ghost.remove();
+  tripLayer.remove(); ghost.remove(); overLayer.remove();
   route.setStyle({ opacity: .85 });
   $("player").hidden = true;
   for (const b of $("tripList").querySelectorAll(".trip")) b.classList.remove("on");
 }
 
+$("speedLimit").value = speedLimit;
+$("speedLimit").addEventListener("change", () => {
+  const v = Math.round(+$("speedLimit").value / 10) * 10;
+  if (!(v >= 30 && v <= 250)) { $("speedLimit").value = speedLimit; return; }
+  speedLimit = v; $("speedLimit").value = v;
+  try { localStorage.setItem(LIMIT_KEY, v); } catch {}
+  if (token) { loadDay(); loadReport(); }
+});
 $("day").value = ymd(new Date());
 $("day").max = ymd(new Date());
 $("day").addEventListener("change", () => { if (token) loadDay(); });
@@ -552,11 +581,11 @@ async function loadReport() {
   const byDay = new Map();
   for (let i = 0; i < days; i++) { const d = new Date(start); d.setDate(d.getDate() + i); byDay.set(ymd(d), []); }
   for (const p of pts) byDay.get(ymd(new Date(p.t * 1000)))?.push(p);
-  let totalM = 0, secs = 0, n = 0, vmax = 0;
+  let totalM = 0, secs = 0, n = 0, vmax = 0, overN = 0;
   const rows = [...byDay].map(([day, dp]) => {
     const tr = splitTrips(dp), m = tr.reduce((a, t) => a + t.dist, 0);
     totalM += m; n += tr.length;
-    for (const t of tr) { secs += t.t1 - t.t0; vmax = Math.max(vmax, t.vmax); }
+    for (const t of tr) { secs += t.t1 - t.t0; vmax = Math.max(vmax, t.vmax); overN += t.overN; }
     return { day, m, trips: tr.length };
   });
   $("repKm").textContent = Math.round(totalM / 1000) + " km";
@@ -564,6 +593,9 @@ async function loadReport() {
   $("repTrips").textContent = n;
   $("repAvg").textContent = (totalM / 1000 / days).toLocaleString("tr-TR", { maximumFractionDigits: 1 }) + " km";
   $("repMax").textContent = vmax ? Math.round(vmax) + " km/sa" : "–";
+  $("repOver").textContent = overN;
+  $("repOverTile").classList.toggle("bad", overN > 0);
+  $("repOverTile").title = speedLimit + " km/sa üstü";
   const chart = $("repChart"); chart.innerHTML = "";
   const top = Math.max(1, ...rows.map(r => r.m)), today = ymd(new Date());
   for (const r of rows) {

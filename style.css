@@ -236,3 +236,12 @@ button.primary:active { filter: brightness(.9); }
 #odoInput, #svcEvery { flex: 1; min-width: 0; }
 .dock-item .badge { position: absolute; top: 6px; right: 6px; width: 9px; height: 9px; border-radius: 50%; background: var(--bad); box-shadow: 0 0 0 2px var(--glass-strong); }
 .dock-item .badge[hidden] { display: none; }
+
+/* ---------- Hız limiti ---------- */
+.limitrow { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); font-weight: 600; }
+.limitrow span:first-child { flex: 1; }
+#speedLimit { width: 76px; text-align: right; }
+.trip .over { grid-column: 1 / -1; color: var(--bad); font-weight: 600; }
+.trip.on .over { color: #fff; }
+.speed.over b { color: var(--bad); }
+#repOverTile.bad b { color: var(--bad); }
