@@ -17,7 +17,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Araç Takip">
 <link rel="stylesheet" href="vendor/leaflet.css">
-<link rel="stylesheet" href="style.css?v=16">
+<link rel="stylesheet" href="style.css?v=17">
 </head>
 <body>
 <div id="map"></div>
@@ -280,6 +280,27 @@
     </div>
   </section>
 
+  <section class="window" data-win="alarm" aria-label="Park alarmı">
+    <header class="titlebar">
+      <div class="lights">
+        <button class="light close" data-act="close" type="button" aria-label="Kapat"></button>
+        <button class="light min" data-act="min" type="button" aria-label="Küçült"></button>
+        <span class="light zoom" aria-hidden="true"></span>
+      </div>
+      <span class="wtitle">Park alarmı</span>
+    </header>
+    <div class="wbody">
+      <div id="alarmNow" class="alerts" aria-live="polite"></div>
+      <div class="group">
+        <span class="glabel">Son 7 gün</span>
+        <div id="alarmLog" class="zonelog"></div>
+      </div>
+      <button type="button" class="glassbtn wide" id="alarmNotify">Bildirimlere izin ver</button>
+      <p class="hint small">Cihaz, araç 5 dakikadır dururken gelen darbe veya eğilmede SMS atar; sürüşte susar.
+        Sayfa açıkken burada da uyarı ve bildirim çıkar. Konum bildirime yazılmaz.</p>
+    </div>
+  </section>
+
   <section class="window" data-win="share" aria-label="Konum paylaş">
     <header class="titlebar">
       <div class="lights">
@@ -368,6 +389,10 @@
     <svg viewBox="0 0 24 24"><path d="M12 10a2 2 0 0 1 1 3.7V22h-2v-8.3A2 2 0 0 1 12 10zM7.8 6.4l1.4 1.4a4 4 0 0 0 0 5.6l-1.4 1.4a6 6 0 0 1 0-8.4zm8.4 0a6 6 0 0 1 0 8.4l-1.4-1.4a4 4 0 0 0 0-5.6zM5 3.6L6.4 5a8 8 0 0 0 0 11.3L5 17.7A10 10 0 0 1 5 3.6zm14 0a10 10 0 0 1 0 14.1l-1.4-1.4a8 8 0 0 0 0-11.3z"/></svg>
     <i class="badge" id="devBadge" hidden></i>
   </button>
+  <button type="button" class="dock-item" data-toggle="alarm" title="Park alarmı">
+    <svg viewBox="0 0 24 24"><path d="M12 2a1.5 1.5 0 0 1 1.5 1.5v.6A6.5 6.5 0 0 1 18.5 10.5V15l2 2.5V19h-17v-1.5l2-2.5v-4.5a6.5 6.5 0 0 1 5-6.4v-.6A1.5 1.5 0 0 1 12 2zm-2.5 18h5a2.5 2.5 0 0 1-5 0z"/></svg>
+    <i class="badge" id="alarmBadge" hidden></i>
+  </button>
   <button type="button" class="dock-item" data-toggle="share" title="Konum paylaş">
     <svg viewBox="0 0 24 24"><path d="M18 16a3 3 0 0 0-2.4 1.2l-6.7-3.4a3 3 0 0 0 0-1.6l6.7-3.4A3 3 0 1 0 15 7c0 .3 0 .5.1.8L8.4 11.2a3 3 0 1 0 0 3.6l6.7 3.4A3 3 0 1 0 18 16z"/></svg>
   </button>
@@ -406,6 +431,6 @@
 <script src="vendor/mqtt.min.js"></script>
 <script src="vendor/qrcode.js"></script>
 <!-- ?v=N: yeni sürümde N artırılır; tarayıcı eski app.js/style.css'i önbellekten vermesin -->
-<script src="app.js?v=16"></script>
+<script src="app.js?v=17"></script>
 </body>
 </html>

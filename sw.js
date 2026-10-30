@@ -1,6 +1,6 @@
 // Sadece bu sitenin kendi dosyaları önbelleğe alınır (çevrimdışı açılış için).
 // flespi, harita karoları ve diğer dış adresler hiç dokunulmadan ağdan gelir.
-const CACHE = "arac-takip-v5";
+const CACHE = "arac-takip-v6";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icons/icon.svg",
   "vendor/leaflet.css", "vendor/leaflet.js", "vendor/mqtt.min.js", "vendor/qrcode.js"];
 
@@ -20,4 +20,10 @@ self.addEventListener("fetch", (e) => {
     if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); }
     return res;
   }).catch(() => caches.match(e.request)));
+});
+
+// Park alarmı bildirimine dokununca açık sekmeyi öne getir, yoksa uygulamayı aç
+self.addEventListener("notificationclick", (e) => {
+  e.notification.close();
+  e.waitUntil(self.clients.matchAll({ type: "window" }).then(l => l.length ? l[0].focus() : self.clients.openWindow("./")));
 });

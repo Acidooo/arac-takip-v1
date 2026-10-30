@@ -231,7 +231,7 @@ async function start() {
     loadLastMove().catch(() => {});
     loadDay();
     loadReport();
-    loadDevice().catch(() => {});
+    loadDevice().catch(() => {}).then(() => loadAlarms()).catch(() => {});
     status("wait", "Canlı bağlantı kuruluyor…");
     connectLive();
   } catch (e) {
@@ -770,6 +770,7 @@ function devMessage(m) {
   const ts = m.timestamp || Date.now() / 1000;
   for (const k in m) if (!devTele[k] || devTele[k].ts <= ts) devTele[k] = { v: m[k], ts };
   renderDevice();
+  liveAlarm(m);
 }
 
 function setTile(id, text, cls) {
@@ -900,6 +901,102 @@ $("dvRefresh").addEventListener("click", () => {
   if (token) loadDevice().catch(e => { $("devAlerts").textContent = "Veri alınamadı: " + e.message; });
 });
 setInterval(renderDevice, 30000);
+
+// ---------- Park alarmı ----------
+// Cihazın çekici (towing) senaryosu sadece kontak kapalıyken çalışır (kontak kaynağı ivmeölçer, 101:2):
+// araç 5 dk durunca devreye girer, darbe/eğilmede kayıt (AVL 246 = 1) ve SMS gönderir. flespi adı doğrulanmadı,
+// "towing" geçen alan aranır. Hızlı (> 3 km/sa) kayıtlar alarm sayılmaz.
+const ALARM_SEEN = "alarmSeen";
+const TOWING = /towing/i;
+let alarms = [];  // [{t, speed}]
+let alarmKey = null;
+let alarmSeen = 0;
+try { alarmSeen = +localStorage.getItem(ALARM_SEEN) || 0; } catch {}
+const parked = (a) => (a.speed || 0) <= 3;
+const dayTime = (t) => new Date(t * 1000).toLocaleString("tr-TR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+
+function alarmOf(m) {
+  alarmKey ||= Object.keys(m).find(k => TOWING.test(k)) || null;
+  const v = alarmKey && m[alarmKey];
+  if (!(v === true || v === 1 || v === "1") || typeof m.timestamp !== "number") return null;
+  return { t: m.timestamp, speed: num(m["position.speed"]) };
+}
+async function loadAlarms() {
+  alarmKey ||= Object.keys(devTele).find(k => TOWING.test(k)) || null;
+  if (alarmKey) {
+    const now = Math.floor(Date.now() / 1000);
+    const msgs = await api(`/gw/devices/${DEVICE_ID}/messages`,
+      { from: now - 7 * 86400, to: now, fields: "timestamp,position.speed," + alarmKey, filter: alarmKey });
+    alarms = msgs.map(alarmOf).filter(Boolean).sort((x, y) => x.t - y.t);
+  }
+  renderAlarms();
+}
+function liveAlarm(m) {
+  const a = alarmOf(m);
+  if (!a || alarms.some(x => x.t === a.t)) return;
+  alarms.push(a); alarms.sort((x, y) => x.t - y.t);
+  renderAlarms();
+  // Cihaz hat yokken biriktirdiği eski kayıtlar için bildirim atma
+  if (parked(a) && Date.now() / 1000 - a.t < 900) notifyAlarm(a);
+}
+
+function renderAlarms() {
+  const now = Date.now() / 1000;
+  const real = alarms.filter(parked);
+  const last = real[real.length - 1];
+  const box = $("alarmNow"); box.innerHTML = "";
+  const p = document.createElement("p");
+  if (last && now - last.t < 6 * 3600) {
+    p.className = "alert bad";
+    p.textContent = "Park halindeyken darbe veya hareket algılandı · " + hm(last.t) + " (" + ago(now - last.t) + ")";
+  } else {
+    p.className = "alert ok";
+    p.textContent = alarmKey ? "Son 6 saatte alarm yok." : "Henüz alarm kaydı gelmedi. Cihazda çekici uyarısı açık olmalı (11600).";
+  }
+  box.append(p);
+
+  const log = $("alarmLog"); log.innerHTML = "";
+  if (!alarms.length) { const e = document.createElement("p"); e.textContent = "Kayıt yok."; log.append(e); }
+  for (const a of [...alarms].reverse()) {
+    const row = document.createElement("div");
+    const t = document.createElement("b"); t.textContent = dayTime(a.t); t.className = "wide";
+    const k = document.createElement("span");
+    k.className = parked(a) ? "out" : "drive";
+    k.textContent = parked(a) ? "park halinde darbe/hareket" : "sürüşte (sayılmadı)";
+    row.append(t, k); log.append(row);
+  }
+  $("alarmBadge").hidden = !real.some(a => a.t > alarmSeen);
+}
+function seeAlarms() {
+  const t = Math.max(0, ...alarms.map(a => a.t));
+  if (t > alarmSeen) { alarmSeen = t; try { localStorage.setItem(ALARM_SEEN, String(t)); } catch {} }
+  renderAlarms();
+}
+// Pencere yöneticisinin tıklama işleyicisi sonra çalışır: pencerenin açıldığını bir tur sonra kontrol et
+document.querySelector('.dock-item[data-toggle="alarm"]').addEventListener("click", () => setTimeout(() => {
+  if (!document.querySelector('.window[data-win="alarm"]').classList.contains("closed")) seeAlarms();
+}));
+
+// Sayfa (veya ana ekrandaki uygulama) açıkken telefon bildirimi; kapalıyken cihazın SMS'i devrede
+function renderNotifyBtn() {
+  const b = $("alarmNotify");
+  if (!("Notification" in window)) { b.hidden = true; return; }
+  b.hidden = Notification.permission === "granted";
+  b.disabled = Notification.permission === "denied";
+  b.textContent = b.disabled ? "Bildirimler tarayıcıda engelli" : "Bildirimlere izin ver";
+}
+$("alarmNotify").addEventListener("click", async () => { await Notification.requestPermission(); renderNotifyBtn(); });
+renderNotifyBtn();
+async function notifyAlarm(a) {
+  if (!("Notification" in window) || Notification.permission !== "granted") return;
+  // Konum yazılmaz: bildirim kilit ekranında görünebilir
+  const opts = { body: "Araç park halindeyken darbe veya hareket algılandı · " + hm(a.t), icon: "icons/icon-192.png", tag: "park-alarm", renotify: true };
+  try {
+    const reg = await navigator.serviceWorker?.getRegistration();
+    if (reg) return await reg.showNotification("Park alarmı", opts);
+  } catch {}
+  try { new Notification("Park alarmı", opts); } catch {}  // Android'de sadece service worker yolu çalışır
+}
 
 // ---------- Pencere yöneticisi ----------
 // Her .window[data-win]: başlıktan sürüklenir, sarı düğme küçültür, kırmızı kapatır, Dock geri açar.
