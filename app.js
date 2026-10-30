@@ -1,6 +1,8 @@
 const DEVICE_ID = 9363738;
 const API = "https://flespi.io";
 const MQTT_URL = "wss://mqtt.flespi.io:443";
+// Booster çıkışı ~11,3 V; bunun altı hücre bitmek üzere demek
+const PACK_LOW = 10.5;
 const FIELDS = "timestamp,position.latitude,position.longitude,position.speed,position.direction,engine.ignition.status,external.powersource.voltage,vehicle.mileage";
 const TOKEN_KEY = "flespiToken";
 
@@ -176,9 +178,9 @@ function update(p) {
   }
   if (isDriving(p)) lastMoveTs = Math.max(lastMoveTs || 0, p.t);
   if (typeof p.volt === "number") {
-    // Kontak kapalıyken 12,0 V altı: akü zayıflıyor olabilir
-    $("batt").textContent = p.volt.toLocaleString("tr-TR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + " V";
-    // Harici pil: 12 V araç aküsü eşikleri geçerli değil, renk uyarısı yok
+    // Harici pil + booster: çıkış sabit kalır, PACK_LOW altına düşmesi hücrenin bittiğini gösterir
+    setTile("batt", p.volt.toLocaleString("tr-TR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + " V",
+      p.volt < PACK_LOW ? "bad" : "");
   }
   if (p.mil != null) { deviceMil = p.mil; renderService(); }
   renderAgo();
@@ -834,8 +836,9 @@ function renderDevice() {
   const cur = num(dv("battery.current"));  // AVL 68
   const ign = dv("engine.ignition.status"), mov = dv("movement.status");  // AVL 239, 240
   // Cihaz araç aküsüne değil harici pile bağlı: araç aküsü eşikleri (12 V, şarj) uygulanmaz
-  setTile("dvExt", ext == null ? "–" : nf(ext) + " V", ext == null ? "" : ext < 6 ? "bad" : "good");
+  setTile("dvExt", ext == null ? "–" : nf(ext) + " V", ext == null ? "" : ext < PACK_LOW ? "bad" : "good");
   if (ext != null && ext < 6) alerts.push(["bad", "Harici güç yok (" + nf(ext) + " V): pil bitmiş veya kablo çıkmış olabilir, cihaz dahili pille çalışıyor."]);
+  else if (ext != null && ext < PACK_LOW) alerts.push(["bad", "Harici pil bitiyor (" + nf(ext) + " V): booster çıkışı düştü, pili şarja götür."]);
   setTile("dvBat", bat == null ? "–" : nf(bat, 2) + " V" + (cur != null && cur > 0.005 ? " · şarj" : ""),
     bat == null ? "" : bat < 3.6 ? "bad" : bat < 3.8 ? "warn" : "good");
   if (bat != null && bat < 3.6) alerts.push(["warn", "Cihazın dahili pili düşük (" + nf(bat, 2) + " V): araç gücü kesilirse uzun dayanmaz."]);
