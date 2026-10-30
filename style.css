@@ -287,3 +287,5 @@ body.share #desktop, body.share #dock, body.share #login, body.share #pickBar { 
   width: min(360px, calc(100% - 32px)); }
 .sharecard .hero { gap: 12px; }
 .qr { display: block; margin: 0 auto; width: 200px; height: 200px; border-radius: 12px; background: #fff; image-rendering: pixelated; }
+#shareSetup[hidden], #shareReady[hidden] { display: none; }
+.linkbtn { border: 0; background: none; padding: 2px; color: var(--accent); font-size: 12px; justify-self: center; }

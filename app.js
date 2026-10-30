@@ -808,12 +808,37 @@ async function tokenCan(tok, path) {
   if (!res.ok) throw new Error("HTTP " + res.status);
   return true;
 }
+// Paylaşım token'ı bir kez kaydedilir (bu cihazın localStorage'ı). Her paylaşımda link'e bitiş zamanı (exp) eklenir;
+// izleyici sayfası exp geçince veri çekmeyi bırakır. Not: bitiş tarayıcıda uygulanır, token flespi'de silinene
+// kadar geçerlidir; tüm linkleri hemen kapatmak için token flespi'den silinip yenisi kaydedilir.
+const SHARE_KEY = "shareToken";
+let ownShare = "";
+try { ownShare = localStorage.getItem(SHARE_KEY) || ""; } catch {}
+function renderShareSetup() {
+  $("shareSetup").hidden = !!ownShare;
+  $("shareReady").hidden = !ownShare;
+  if (!ownShare) $("shareOut").hidden = true;
+}
+renderShareSetup();
+$("shareReset").addEventListener("click", () => {
+  ownShare = ""; try { localStorage.removeItem(SHARE_KEY); } catch {}
+  $("shareNote").textContent = ""; renderShareSetup();
+});
+$("shareDur").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) setSeg("shareDur", b.dataset.v); });
+$("shareMake").addEventListener("click", () => {
+  const exp = Math.floor(Date.now() / 1000) + +segValue("shareDur") * 3600;
+  $("shareLink").value = location.origin + location.pathname + "#share=" + ownShare + "&exp=" + exp;
+  drawQr($("shareQr"), $("shareLink").value);
+  $("shareUntil").textContent = "Bitiş: " + new Date(exp * 1000).toLocaleString("tr-TR", { dateStyle: "medium", timeStyle: "short" });
+  $("shareOut").hidden = false;
+  $("shareSend").hidden = !navigator.share;
+});
 $("shareForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   const tok = $("shareToken").value.replace(/[^A-Za-z0-9]/g, "");
   $("shareOut").hidden = true; $("shareNote").textContent = "";
   if (!tok) return;
-  if (tok === token) { $("shareNote").textContent = "Bu senin ana token'ın. Paylaşım için flespi'de ayrı, süreli bir token oluştur."; return; }
+  if (tok === token) { $("shareNote").textContent = "Bu senin ana token'ın. Paylaşım için flespi'de ayrı bir token oluştur."; return; }
   $("shareNote").textContent = "Token kontrol ediliyor…";
   try {
     if (!await tokenCan(tok, `/gw/devices/${DEVICE_ID}/telemetry/position.latitude`)) {
@@ -826,10 +851,8 @@ $("shareForm").addEventListener("submit", async (e) => {
   } catch (err) { $("shareNote").textContent = "Kontrol edilemedi: " + err.message; return; }
   $("shareNote").textContent = "";
   $("shareToken").value = "";
-  $("shareLink").value = location.origin + location.pathname + "#share=" + tok;
-  drawQr($("shareQr"), $("shareLink").value);
-  $("shareOut").hidden = false;
-  $("shareSend").hidden = !navigator.share;
+  ownShare = tok; try { localStorage.setItem(SHARE_KEY, tok); } catch {}
+  renderShareSetup();
 });
 // QR: vendor/qrcode.js (MIT) ile canvas'a çizilir; bağlantı dışarı gönderilmez
 function drawQr(cv, text) {
@@ -853,18 +876,20 @@ $("shareSend").addEventListener("click", () => {
   navigator.share({ title: "Araç konumu", url: $("shareLink").value }).catch(() => {});
 });
 
-async function startShare(tok) {
+async function startShare(tok, exp) {
   document.body.classList.add("share");
   $("shareCard").hidden = false;
   route.remove(); zoneLayer.remove();
+  const expired = () => {
+    $("shareErr").textContent = "Bu paylaşım linkinin süresi dolmuş veya iptal edilmiş.";
+    $("shareAgo").textContent = ""; $("shareSpeed").textContent = "–"; marker.remove(); clearInterval(timer);
+  };
   const tick = async () => {
+    if (exp && Date.now() / 1000 > exp) return expired();
     try {
       const res = await fetch(API + `/gw/devices/${DEVICE_ID}/telemetry/position.latitude,position.longitude,position.speed,position.direction`,
         { headers: { Authorization: "FlespiToken " + tok } });
-      if (res.status === 401 || res.status === 403) {
-        $("shareErr").textContent = "Bu paylaşım linkinin süresi dolmuş veya iptal edilmiş.";
-        $("shareAgo").textContent = ""; marker.remove(); clearInterval(timer); return;
-      }
+      if (res.status === 401 || res.status === 403) return expired();
       if (!res.ok) throw new Error("HTTP " + res.status);
       const t = ((await res.json()).result || [])[0]?.telemetry || {};
       const v = (k) => t[k]?.value;
@@ -874,7 +899,8 @@ async function startShare(tok) {
       points = [p]; lastMoveTs = null;
       update(p);
       $("shareSpeed").textContent = p.speed == null ? "–" : Math.round(p.speed);
-      $("shareAgo").textContent = $("ago").textContent;
+      $("shareAgo").textContent = $("ago").textContent +
+        (exp ? " · bitiş " + new Date(exp * 1000).toLocaleString("tr-TR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
       $("shareErr").textContent = "";
     } catch (e) { $("shareErr").textContent = "Bağlantı hatası: " + e.message; }
   };
@@ -882,8 +908,8 @@ async function startShare(tok) {
   tick();
 }
 
-const shareToken = (location.hash.match(/^#share=([A-Za-z0-9]+)$/) || [])[1];
+const shareMatch = location.hash.match(/^#share=([A-Za-z0-9]+)(?:&exp=(\d{9,11}))?$/);
 // Aynı sekmede link değişirse (paylaşım ↔ normal) sayfayı baştan kur
 addEventListener("hashchange", () => location.reload());
-if (shareToken) startShare(shareToken);
+if (shareMatch) startShare(shareMatch[1], shareMatch[2] ? +shareMatch[2] : 0);
 else token ? start() : askToken();
