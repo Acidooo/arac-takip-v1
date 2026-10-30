@@ -17,7 +17,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Araç Takip">
 <link rel="stylesheet" href="vendor/leaflet.css">
-<link rel="stylesheet" href="style.css?v=7">
+<link rel="stylesheet" href="style.css?v=8">
 </head>
 <body>
 <div id="map"></div>
@@ -224,6 +224,48 @@
     </div>
   </section>
 
+  <section class="window" data-win="share" aria-label="Konum paylaş">
+    <header class="titlebar">
+      <div class="lights">
+        <button class="light close" data-act="close" type="button" aria-label="Kapat"></button>
+        <button class="light min" data-act="min" type="button" aria-label="Küçült"></button>
+        <span class="light zoom" aria-hidden="true"></span>
+      </div>
+      <span class="wtitle">Paylaş</span>
+    </header>
+    <div class="wbody">
+      <p class="hint">Linki açan kişi sadece aracın <b>canlı konumunu</b> görür; geçmiş, rota ve bölgeler görünmez.</p>
+      <ol class="steps">
+        <li>flespi panelinde <b>Tokens → +</b>: ACL'de <code>gw/devices</code>, sadece bu cihaz, sadece <b>GET</b>, alt modül sadece <b>telemetry</b>.</li>
+        <li><b>Expire</b> alanına bitiş zamanı ver (ör. 2 saat sonra).</li>
+        <li>Token'ı aşağı yapıştır, link oluştur.</li>
+      </ol>
+      <form id="shareForm" class="group">
+        <input id="shareToken" class="field" type="password" autocomplete="off" spellcheck="false" placeholder="Paylaşım token'ı">
+        <button type="submit" class="glassbtn wide">Link oluştur</button>
+      </form>
+      <p class="note" id="shareNote"></p>
+      <div id="shareOut" class="group" hidden>
+        <input id="shareLink" class="field" readonly aria-label="Paylaşım linki">
+        <div class="btnrow">
+          <button type="button" class="glassbtn wide" id="shareCopy">Kopyala</button>
+          <button type="button" class="glassbtn wide" id="shareSend">Paylaş…</button>
+        </div>
+        <p class="hint small">İptal etmek için token'ı flespi'den sil. Süresi dolunca link kendiliğinden çalışmaz.</p>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<div id="shareCard" class="window sharecard" hidden>
+  <div class="wbody">
+    <div class="hero">
+      <div><b class="ltitle">Canlı konum</b><div class="hint" id="shareAgo">Yükleniyor…</div></div>
+      <div class="speed"><b id="shareSpeed">–</b><span>km/sa</span></div>
+    </div>
+    <p class="note" id="shareErr"></p>
+  </div>
 </div>
 
 <div id="pickBar" class="pickbar" hidden role="status">
@@ -250,6 +292,9 @@
   <button type="button" class="dock-item" data-toggle="service" title="Bakım">
     <svg viewBox="0 0 24 24"><path d="M21.7 18.6l-8.5-8.5a5.5 5.5 0 0 0-7-7.1l3.3 3.3-2.1 2.1-3.3-3.3a5.5 5.5 0 0 0 7.1 7l8.5 8.5a1 1 0 0 0 1.4 0l.6-.6a1 1 0 0 0 0-1.4z"/></svg>
     <i class="badge" id="svcBadge" hidden></i>
+  </button>
+  <button type="button" class="dock-item" data-toggle="share" title="Konum paylaş">
+    <svg viewBox="0 0 24 24"><path d="M18 16a3 3 0 0 0-2.4 1.2l-6.7-3.4a3 3 0 0 0 0-1.6l6.7-3.4A3 3 0 1 0 15 7c0 .3 0 .5.1.8L8.4 11.2a3 3 0 1 0 0 3.6l6.7 3.4A3 3 0 1 0 18 16z"/></svg>
   </button>
   <span class="dock-sep"></span>
   <button type="button" class="dock-item" id="recenter" title="Aracı ortala">
@@ -285,6 +330,6 @@
 <script src="vendor/leaflet.js"></script>
 <script src="vendor/mqtt.min.js"></script>
 <!-- ?v=N: yeni sürümde N artırılır; tarayıcı eski app.js/style.css'i önbellekten vermesin -->
-<script src="app.js?v=7"></script>
+<script src="app.js?v=8"></script>
 </body>
 </html>

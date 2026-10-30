@@ -795,4 +795,77 @@ for (const b of document.querySelectorAll(".dock-item[data-toggle]")) {
 }
 addEventListener("resize", () => wins.forEach(clamp));
 
-token ? start() : askToken();
+// ---------- Konum paylaşma ----------
+// Link: <site>/#share=<token>. # sonrası sunucuya (GitHub) gitmez. Paylaşım token'ı sadece telemetri okuyabilmeli;
+// görünümde geçmiş/rota/bölge yok, token hiçbir yere kaydedilmez.
+async function tokenCan(tok, path) {
+  const res = await fetch(API + path, { headers: { Authorization: "FlespiToken " + tok } });
+  if (res.status === 401 || res.status === 403) return false;
+  if (!res.ok) throw new Error("HTTP " + res.status);
+  return true;
+}
+$("shareForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const tok = $("shareToken").value.replace(/[^A-Za-z0-9]/g, "");
+  $("shareOut").hidden = true; $("shareNote").textContent = "";
+  if (!tok) return;
+  if (tok === token) { $("shareNote").textContent = "Bu senin ana token'ın. Paylaşım için flespi'de ayrı, süreli bir token oluştur."; return; }
+  $("shareNote").textContent = "Token kontrol ediliyor…";
+  try {
+    if (!await tokenCan(tok, `/gw/devices/${DEVICE_ID}/telemetry/position.latitude`)) {
+      $("shareNote").textContent = "Bu token aracın konumunu okuyamıyor (süresi dolmuş veya ACL eksik)."; return;
+    }
+    // Geçmişi de okuyabiliyorsa paylaşma: link sızarsa tüm rota görünür
+    if (await tokenCan(tok, `/gw/devices/${DEVICE_ID}/messages?data=` + encodeURIComponent(JSON.stringify({ count: 1, fields: "timestamp" })))) {
+      $("shareNote").textContent = "Bu token geçmiş mesajları da okuyabiliyor. Güvenlik için ACL'de sadece telemetry bırak."; return;
+    }
+  } catch (err) { $("shareNote").textContent = "Kontrol edilemedi: " + err.message; return; }
+  $("shareNote").textContent = "";
+  $("shareToken").value = "";
+  $("shareLink").value = location.origin + location.pathname + "#share=" + tok;
+  $("shareOut").hidden = false;
+  $("shareSend").hidden = !navigator.share;
+});
+$("shareCopy").addEventListener("click", async () => {
+  try { await navigator.clipboard.writeText($("shareLink").value); $("shareCopy").textContent = "Kopyalandı"; }
+  catch { $("shareLink").select(); $("shareCopy").textContent = "Seçildi, kopyala"; }
+  setTimeout(() => { $("shareCopy").textContent = "Kopyala"; }, 2000);
+});
+$("shareSend").addEventListener("click", () => {
+  navigator.share({ title: "Araç konumu", url: $("shareLink").value }).catch(() => {});
+});
+
+async function startShare(tok) {
+  document.body.classList.add("share");
+  $("shareCard").hidden = false;
+  route.remove(); zoneLayer.remove();
+  const tick = async () => {
+    try {
+      const res = await fetch(API + `/gw/devices/${DEVICE_ID}/telemetry/position.latitude,position.longitude,position.speed,position.direction`,
+        { headers: { Authorization: "FlespiToken " + tok } });
+      if (res.status === 401 || res.status === 403) {
+        $("shareErr").textContent = "Bu paylaşım linkinin süresi dolmuş veya iptal edilmiş.";
+        $("shareAgo").textContent = ""; marker.remove(); clearInterval(timer); return;
+      }
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const t = ((await res.json()).result || [])[0]?.telemetry || {};
+      const v = (k) => t[k]?.value;
+      const p = toPoint({ "position.latitude": v("position.latitude"), "position.longitude": v("position.longitude"),
+        "position.speed": v("position.speed"), "position.direction": v("position.direction"), timestamp: t["position.latitude"]?.ts });
+      if (!p) { $("shareAgo").textContent = "Konum yok"; return; }
+      points = [p]; lastMoveTs = null;
+      update(p);
+      $("shareSpeed").textContent = p.speed == null ? "–" : Math.round(p.speed);
+      $("shareAgo").textContent = $("ago").textContent;
+      $("shareErr").textContent = "";
+    } catch (e) { $("shareErr").textContent = "Bağlantı hatası: " + e.message; }
+  };
+  const timer = setInterval(tick, 10000);
+  tick();
+}
+
+const shareToken = (location.hash.match(/^#share=([A-Za-z0-9]+)$/) || [])[1];
+// Aynı sekmede link değişirse (paylaşım ↔ normal) sayfayı baştan kur
+addEventListener("hashchange", () => location.reload());
+if (shareToken) startShare(shareToken);
+else token ? start() : askToken();
