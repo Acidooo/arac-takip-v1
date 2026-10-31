@@ -335,5 +335,5 @@ body.share #desktop, body.share #dock, body.share #login, body.share #pickBar { 
 .rawlist b { font-weight: 600; text-align: right; overflow-wrap: anywhere; }
 
 /* Sürüm etiketi: sol alt köşe, dikkat çekmeyecek kadar küçük */
-.ver { position: fixed; left: 6px; bottom: 4px; z-index: 5; font-size: 10px; color: var(--muted); opacity: .7; pointer-events: none; }
+.ver { margin: -4px 0 0; text-align: right; font-size: 10px; color: var(--muted); font-variant-numeric: tabular-nums; }
 body.share .ver { display: none; }

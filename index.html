@@ -17,7 +17,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Araç Takip">
 <link rel="stylesheet" href="vendor/leaflet.css">
-<link rel="stylesheet" href="style.css?v=19">
+<link rel="stylesheet" href="style.css?v=20">
 </head>
 <body>
 <div id="map"></div>
@@ -83,6 +83,7 @@
         <button type="button" class="glassbtn" id="zoomOut" aria-label="Uzaklaştır">－</button>
         <button type="button" class="glassbtn wide" id="fitRoute">Rotayı göster</button>
       </div>
+      <p id="ver" class="ver" title="Sayfa sürümü"></p>
     </div>
   </section>
 
@@ -378,7 +379,6 @@
   <button type="button" id="pickCancel">İptal</button>
 </div>
 
-<span id="ver" class="ver" title="Sayfa sürümü"></span>
 <nav id="dock" aria-label="Dock">
   <button type="button" class="dock-item" data-toggle="vehicle" title="Araç">
     <svg viewBox="0 0 24 24"><path d="M5 11l1.6-4.2A2 2 0 0 1 8.5 5.5h7a2 2 0 0 1 1.9 1.3L19 11v6a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H8v1a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1zm2.2 0h9.6l-1.2-3.3a.5.5 0 0 0-.5-.3H8.9a.5.5 0 0 0-.5.3zM7.5 14.5a1.2 1.2 0 1 0 0-2.4 1.2 1.2 0 0 0 0 2.4zm9 0a1.2 1.2 0 1 0 0-2.4 1.2 1.2 0 0 0 0 2.4z"/></svg>
@@ -445,6 +445,6 @@
 <script src="vendor/mqtt.min.js"></script>
 <script src="vendor/qrcode.js"></script>
 <!-- ?v=N: yeni sürümde N artırılır; tarayıcı eski app.js/style.css'i önbellekten vermesin -->
-<script src="app.js?v=19"></script>
+<script src="app.js?v=20"></script>
 </body>
 </html>
