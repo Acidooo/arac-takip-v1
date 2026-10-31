@@ -327,3 +327,7 @@ body.share #desktop, body.share #dock, body.share #login, body.share #pickBar { 
 .rawlist div { display: flex; justify-content: space-between; gap: 8px; padding: 2px 0; border-bottom: 1px solid var(--hair); }
 .rawlist span { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rawlist b { font-weight: 600; text-align: right; overflow-wrap: anywhere; }
+
+/* Sürüm etiketi: sol alt köşe, dikkat çekmeyecek kadar küçük */
+.ver { position: fixed; left: 6px; bottom: 4px; z-index: 5; font-size: 10px; color: var(--muted); opacity: .7; pointer-events: none; }
+body.share .ver { display: none; }

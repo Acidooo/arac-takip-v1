@@ -5,11 +5,14 @@ const MQTT_URL = "wss://mqtt.flespi.io:443";
 const PACK_LOW = 10.5;
 const FIELDS = "timestamp,position.latitude,position.longitude,position.speed,position.direction,engine.ignition.status,external.powersource.voltage,vehicle.mileage";
 const TOKEN_KEY = "flespiToken";
+// index.html'deki ?v=N ile aynı tutulur; sayfanın sol altında görünür
+const APP_VERSION = 18;
 
 // Başka bir sitenin içine (iframe) gömülmeyi reddet: GitHub Pages frame-ancestors başlığı gönderemiyor
 if (window.top !== window.self) { document.documentElement.hidden = true; throw new Error("framed"); }
 
 const $ = (id) => document.getElementById(id);
+$("ver").textContent = "v" + APP_VERSION;
 let token = load();
 let mqttClient = null;
 let points = [];   // [{t, lat, lon, speed}]
