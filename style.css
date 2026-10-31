@@ -307,6 +307,12 @@ body.share #desktop, body.share #dock, body.share #login, body.share #pickBar { 
 .window[data-win="device"] .wbody { max-height: calc(100vh - 140px); overflow-y: auto; }
 .window[data-win="device"] .tile b { display: flex; align-items: center; gap: 6px; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .window[data-win="device"] .tile b em { font-style: normal; }
+/* Pil voltajı grafiği: kesikli çizgi PACK_LOW eşiği */
+.vchart { width: 100%; height: 80px; background: var(--fill); border-radius: 12px; }
+.vchart polyline { fill: none; stroke: var(--accent); stroke-width: 1.5; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+.vchart line { stroke: var(--bad); stroke-width: 1; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; opacity: .7; }
+.vaxis { display: flex; justify-content: space-between; margin-top: -2px; }
+.vaxis small { font-size: 10px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .tile.good b { color: var(--ok-fg); } .tile.warn b { color: var(--warn-fg); } .tile.bad b { color: var(--bad-fg); }
 /* Sinyal çubukları: .l0–.l5 kaç çubuğun dolu olduğunu söyler */
 .sigbars { display: inline-flex; align-items: flex-end; gap: 2px; height: 14px; flex: none; }
