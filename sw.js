@@ -1,6 +1,6 @@
 // Sadece bu sitenin kendi dosyaları önbelleğe alınır (çevrimdışı açılış için).
 // flespi, harita karoları ve diğer dış adresler hiç dokunulmadan ağdan gelir.
-const CACHE = "arac-takip-v6";
+const CACHE = "arac-takip-v7";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icons/icon.svg",
   "vendor/leaflet.css", "vendor/leaflet.js", "vendor/mqtt.min.js", "vendor/qrcode.js"];
 
