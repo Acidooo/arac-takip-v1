@@ -6,7 +6,7 @@ const PACK_LOW = 10.5;
 const FIELDS = "timestamp,position.latitude,position.longitude,position.speed,position.direction,engine.ignition.status,external.powersource.voltage,vehicle.mileage";
 const TOKEN_KEY = "flespiToken";
 // index.html'deki ?v=N ile aynı tutulur; sayfanın sol altında görünür
-const APP_VERSION = 18;
+const APP_VERSION = 19;
 
 // Başka bir sitenin içine (iframe) gömülmeyi reddet: GitHub Pages frame-ancestors başlığı gönderemiyor
 if (window.top !== window.self) { document.documentElement.hidden = true; throw new Error("framed"); }
@@ -235,6 +235,7 @@ async function start() {
     loadDay();
     loadReport();
     loadDevice().catch(() => {}).then(() => loadAlarms()).catch(() => {});
+    loadPack().catch(() => {});
     status("wait", "Canlı bağlantı kuruluyor…");
     connectLive();
   } catch (e) {
@@ -772,6 +773,7 @@ async function loadDevice() {
 function devMessage(m) {
   const ts = m.timestamp || Date.now() / 1000;
   for (const k in m) if (!devTele[k] || devTele[k].ts <= ts) devTele[k] = { v: m[k], ts };
+  packMessage(m, ts);
   renderDevice();
   liveAlarm(m);
 }
@@ -849,6 +851,9 @@ function renderDevice() {
   else if (ext != null && ext < PACK_LOW) alerts.push(["bad", "Harici pil bitiyor (" + nf(ext) + " V): booster çıkışı düştü, pili şarja götür."]);
   setTile("dvBat", bat == null ? "–" : nf(bat, 2) + " V" + (cur != null && cur > 0.005 ? " · şarj" : ""),
     bat == null ? "" : bat < 3.6 ? "bad" : bat < 3.8 ? "warn" : "good");
+  const pe = packEstimate(ext);
+  renderPack(pe);
+  if (pe && !pe.low && pe.left < 2 * 86400) alerts.push(["warn", "Harici pil tahminen " + (pe.left > 0 ? daysText(pe.left) + " içinde" : "her an") + " bitecek: şarj etmeyi planla."]);
   if (bat != null && bat < 3.6) alerts.push(["warn", "Cihazın dahili pili düşük (" + nf(bat, 2) + " V): araç gücü kesilirse uzun dayanmaz."]);
   const yn = (b, on, off) => b == null ? "?" : b ? on : off;
   $("dvIgn").textContent = ign == null && mov == null ? "–" : yn(ign, "Açık", "Kapalı") + " · " + yn(mov, "Var", "Yok");
@@ -902,8 +907,104 @@ function renderRaw(shown) {
 $("dvRaw").closest("details").addEventListener("toggle", (e) => { if (e.target.open) renderRaw(); });
 $("dvRefresh").addEventListener("click", () => {
   if (token) loadDevice().catch(e => { $("devAlerts").textContent = "Veri alınamadı: " + e.message; });
+  if (token) loadPack().catch(() => {});
 });
 setInterval(renderDevice, 30000);
+
+// ---------- Pil ömrü tahmini ----------
+// Booster çıkışı pil bitene kadar ~11,3 V'ta sabit kalır, yani voltajdan doluluk okunamaz. Tahmin süreye dayanır:
+// kalan = bir dolumun süresi − son şarjdan beri geçen süre.
+// Şarj anı: voltaj PACK_LOW altında kaldıktan (pil bitti ya da çıkarıldı) sonra tekrar üstüne çıktığı ilk kayıt,
+// ya da "Pili şimdi şarj ettim" düğmesi. Bir dolum: şarjdan PACK_LOW altına ilk düşüşe kadar geçen süre
+// (son 5 döngünün ortancası). Hepsi bu tarayıcının localStorage'ında; flespi kayıtları silinse de kalır.
+const PACK_KEY = "packLife";
+const PACK_DEFAULT_DAYS = 21;  // ilk tam döngü görülene kadar: 74 Wh, online derin uyku için kaba hesap 3-4 hafta
+const pack = { charged: 0, marks: [], cycles: [] };  // charged: son şarj (unix sn); marks: elle işaretlenenler; cycles: [[şarj, bitiş], ...]
+try { Object.assign(pack, JSON.parse(localStorage.getItem(PACK_KEY)) || {}); } catch {}
+const savePack = () => { try { localStorage.setItem(PACK_KEY, JSON.stringify(pack)); } catch {} };
+let packPts = [];  // [{t, v}] son 30 gün
+const daysText = (s) => s >= 86400 ? Math.round(s / 86400) + " gün" : Math.max(1, Math.round(s / 3600)) + " saat";
+
+async function loadPack() {
+  const now = Math.floor(Date.now() / 1000);
+  const msgs = await api(`/gw/devices/${DEVICE_ID}/messages`, { from: now - 30 * 86400, to: now,
+    fields: "timestamp,external.powersource.voltage", filter: "external.powersource.voltage" });
+  packPts = msgs.map(m => ({ t: m.timestamp, v: num(m["external.powersource.voltage"]) })).filter(p => p.v != null);
+  learnPack(); drawPack(); renderDevice();
+}
+function packMessage(m, ts) {
+  const v = num(m["external.powersource.voltage"]);
+  if (v == null || (packPts.length && ts <= packPts[packPts.length - 1].t)) return;
+  packPts.push({ t: ts, v }); learnPack(); drawPack();
+}
+
+// Düşük dönem: PACK_LOW altında en az iki kayıt ya da 6 V altı (pil çıkarılmış); tek bir düşük okuma gürültü sayılır
+function learnPack() {
+  let t0 = 0, run = [];
+  const endRun = () => {
+    if (run.length >= 2 || run.some(p => p.v < 6)) {
+      // Pil takılıyken şarj edildiyse (voltaj düşmeden) elle işaret döngünün başıdır
+      const mark = Math.max(0, ...pack.marks.filter(m => m < run[0].t));
+      if (mark > t0) t0 = mark;
+      if (t0 && run[0].t - t0 > 86400 && !pack.cycles.some(c => Math.abs(c[0] - t0) < 3600)) pack.cycles.push([t0, run[0].t]);
+      return true;
+    }
+    return false;
+  };
+  for (const p of packPts) {
+    if (p.v < PACK_LOW) { run.push(p); continue; }
+    if (run.length && endRun()) t0 = p.t;
+    run = [];
+  }
+  if (run.length) endRun();
+  pack.cycles = pack.cycles.sort((a, b) => a[0] - b[0]).slice(-5);
+  if (t0 > pack.charged) pack.charged = t0;
+  savePack();
+}
+
+function packEstimate(ext) {
+  const now = Date.now() / 1000;
+  const v = ext ?? (packPts.length ? packPts[packPts.length - 1].v : null);
+  const lens = pack.cycles.map(c => c[1] - c[0]).sort((a, b) => a - b);
+  const life = lens.length ? lens[Math.floor(lens.length / 2)] : PACK_DEFAULT_DAYS * 86400;
+  if (v == null && !pack.charged) return null;
+  return { low: v != null && v < PACK_LOW, last: pack.charged, life, learned: lens.length,
+    left: pack.charged ? pack.charged + life - now : null };
+}
+function renderPack(e) {
+  if (!e) return;
+  const now = Date.now() / 1000;
+  $("pkLife").textContent = "≈ " + daysText(e.life) + (e.learned ? "" : " (varsayılan)");
+  $("pkLife").title = e.learned ? e.learned + " tam dolumdan öğrenildi" : "Henüz tam bir dolum görülmedi; varsayılan " + PACK_DEFAULT_DAYS + " gün";
+  $("pkLast").textContent = e.last ? ago(now - e.last) : "Bilinmiyor";
+  $("pkLast").title = e.last ? new Date(e.last * 1000).toLocaleString("tr-TR") : "Son 30 günde şarj görülmedi; şarj edince düğmeye bas";
+  if (e.low) setTile("pkLeft", "Bitti, şarj et", "bad");
+  else if (e.left == null) setTile("pkLeft", "Bilinmiyor", "");
+  else setTile("pkLeft", e.left > 0 ? "≈ " + daysText(e.left) : "Her an", e.left > 3 * 86400 ? "good" : e.left > 86400 ? "warn" : "bad");
+  $("pkEnd").textContent = e.low ? "Şimdi" : e.left == null ? "–"
+    : new Date((now + Math.max(0, e.left)) * 1000).toLocaleDateString("tr-TR", { day: "numeric", month: "short", weekday: "short" });
+}
+
+// Saatlik en düşük değer çizilir (kısa düşüşler kaybolmasın); 8–12,5 V aralığı, altı en alta yapışır
+function drawPack() {
+  const svg = $("pkChart"), NS = "http://www.w3.org/2000/svg";
+  svg.innerHTML = "";
+  const now = Date.now() / 1000, from = now - 30 * 86400, LO = 8, HI = 12.5;
+  const y = (v) => (80 - (Math.min(HI, Math.max(LO, v)) - LO) / (HI - LO) * 76 - 2).toFixed(1);
+  const th = document.createElementNS(NS, "line");
+  th.setAttribute("x1", 0); th.setAttribute("x2", 300); th.setAttribute("y1", y(PACK_LOW)); th.setAttribute("y2", y(PACK_LOW));
+  svg.append(th);
+  const hours = new Map();
+  for (const p of packPts) { const h = Math.floor(p.t / 3600); if (!hours.has(h) || p.v < hours.get(h)) hours.set(h, p.v); }
+  const pts = [...hours].map(([h, v]) => ((h * 3600 - from) / (now - from) * 300).toFixed(1) + "," + y(v));
+  if (pts.length) { const pl = document.createElementNS(NS, "polyline"); pl.setAttribute("points", pts.join(" ")); svg.append(pl); }
+  $("pkFrom").textContent = new Date(from * 1000).toLocaleDateString("tr-TR", { day: "numeric", month: "short" });
+}
+$("pkCharged").addEventListener("click", () => {
+  pack.charged = Math.floor(Date.now() / 1000);
+  pack.marks = [...pack.marks, pack.charged].slice(-10);
+  savePack(); renderDevice();
+});
 
 // ---------- Park alarmı ----------
 // Cihazın çekici (towing) senaryosu sadece kontak kapalıyken çalışır (kontak kaynağı ivmeölçer, 101:2):

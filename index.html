@@ -17,7 +17,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Araç Takip">
 <link rel="stylesheet" href="vendor/leaflet.css">
-<link rel="stylesheet" href="style.css?v=18">
+<link rel="stylesheet" href="style.css?v=19">
 </head>
 <body>
 <div id="map"></div>
@@ -265,6 +265,19 @@
         </div>
       </div>
       <div class="group">
+        <span class="glabel">Pil ömrü (tahmin)</span>
+        <div class="tiles">
+          <div class="tile" id="pkLeftTile"><span>Kalan</span><b id="pkLeft">–</b></div>
+          <div class="tile"><span>Tahmini bitiş</span><b id="pkEnd">–</b></div>
+          <div class="tile"><span>Son şarj</span><b id="pkLast">–</b></div>
+          <div class="tile"><span>Bir dolum</span><b id="pkLife">–</b></div>
+        </div>
+        <svg id="pkChart" class="vchart" viewBox="0 0 300 80" preserveAspectRatio="none" role="img" aria-label="Son 30 günün harici pil voltajı"></svg>
+        <div class="vaxis"><small id="pkFrom"></small><small>Voltaj, son 30 gün</small><small>bugün</small></div>
+        <button type="button" class="glassbtn wide" id="pkCharged">Pili şimdi şarj ettim</button>
+        <p class="hint small">Booster çıkışı pil bitene kadar sabit kaldığı için voltajdan doluluk okunamaz; tahmin son şarjdan geçen süreye dayanır. Pil bir kez bitip şarj edilince gerçek dolum süresi öğrenilir.</p>
+      </div>
+      <div class="group">
         <span class="glabel">Bağlantı</span>
         <div class="tiles">
           <div class="tile"><span>Son veri</span><b id="dvLast">–</b></div>
@@ -432,6 +445,6 @@
 <script src="vendor/mqtt.min.js"></script>
 <script src="vendor/qrcode.js"></script>
 <!-- ?v=N: yeni sürümde N artırılır; tarayıcı eski app.js/style.css'i önbellekten vermesin -->
-<script src="app.js?v=18"></script>
+<script src="app.js?v=19"></script>
 </body>
 </html>
