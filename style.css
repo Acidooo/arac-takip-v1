@@ -181,7 +181,14 @@ html .zone .del:hover, html .svc .del:hover { background: rgba(255,69,58,.14); c
     width: auto !important; }
   .titlebar { cursor: default; }
   .speed b { font-size: 38px; }
-  #dock { bottom: max(10px, env(safe-area-inset-bottom)); }
+  /* Dock ekran genişliğine yayılır; 11 düğme 320px'e kadar yatay kaydırma olmadan sığar */
+  #dock { bottom: max(10px, env(safe-area-inset-bottom)); left: max(8px, env(safe-area-inset-left)); right: max(8px, env(safe-area-inset-right));
+    transform: none; gap: 2px; padding: 4px; border-radius: 18px; max-width: 520px; margin: 0 auto; }
+  .dock-item { flex: 1 1 0; min-width: 0; width: auto; height: 44px; border-radius: 12px; }
+  .dock-item svg { width: clamp(18px, 5.4vw, 22px); height: clamp(18px, 5.4vw, 22px); }
+  .dock-item:hover { transform: none; }
+  .dock-item .badge { top: 5px; right: max(2px, calc(50% - 16px)); width: 8px; height: 8px; }
+  .dock-sep { flex: none; height: 26px; margin: 0 1px; }
   .leaflet-container .leaflet-control-attribution { margin-bottom: calc(max(10px, env(safe-area-inset-bottom)) + 66px); font-size: 10px; border-radius: 8px 0 0 8px; border-width: 1px 0 1px 1px; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
